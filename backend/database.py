@@ -73,4 +73,31 @@ class InMemoryDatabase:
         self.topup_events.append(event)
         return event
 
+    # User methods
+    def get_user_by_email(self, email: str) -> Optional[User]:
+        return next((user for user in self.users if user.email == email), None)
+
+    def get_user_by_id(self, user_id: str) -> Optional[User]:
+        return next((user for user in self.users if user.id == user_id), None)
+
+    def create_user(self, user: User) -> User:
+        self.users.append(user)
+        return user
+
+    def get_user_password_hash(self, email: str) -> Optional[str]:
+        return self.user_passwords.get(email)
+
+    def set_user_password_hash(self, email: str, password_hash: str):
+        self.user_passwords[email] = password_hash
+
+    # User-filtered methods
+    def get_accounts_by_user(self, user_id: str) -> List[Account]:
+        return [acc for acc in self.accounts if acc.user_id == user_id]
+
+    def get_account_by_user(self, account_id: str, user_id: str) -> Optional[Account]:
+        account = self.get_account(account_id)
+        if account and account.user_id == user_id:
+            return account
+        return None
+
 db = InMemoryDatabase()
