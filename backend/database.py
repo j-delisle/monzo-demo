@@ -1,13 +1,35 @@
-from models import Account, Transaction, TopUpRule, TopUpEvent
+from models import Account, Transaction, TopUpRule, TopUpEvent, User
 from datetime import datetime
 from typing import List, Optional
 import uuid
 
 class InMemoryDatabase:
     def __init__(self):
+        # Demo users with hashed passwords
+        self.users: List[User] = [
+            User(
+                id="user_1",
+                email="demo@monzo.com",
+                name="Demo User",
+                created_at=datetime.now()
+            ),
+            User(
+                id="user_2",
+                email="john@example.com",
+                name="John Doe",
+                created_at=datetime.now()
+            )
+        ]
+        # Store hashed passwords separately (in real app would be in User model)
+        self.user_passwords = {
+            "demo@monzo.com": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",  # "demo"
+            "john@example.com": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW"   # "demo"
+        }
+
         self.accounts: List[Account] = [
             Account(id="acc_1", name="Current Account", balance=150.50, user_id="user_1"),
             Account(id="acc_2", name="Savings Account", balance=1250.00, user_id="user_1"),
+            Account(id="acc_3", name="Current Account", balance=89.23, user_id="user_2"),
         ]
         self.transactions: List[Transaction] = []
         self.topup_rules: List[TopUpRule] = []
