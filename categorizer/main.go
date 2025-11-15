@@ -20,7 +20,7 @@ type CategoryResponse struct {
 func categorizeTransaction(merchant, description string, amount float64) string {
 	merchantLower := strings.ToLower(merchant)
 	descriptionLower := strings.ToLower(description)
-	
+
 	// Transport
 	transportKeywords := []string{"uber", "lyft", "taxi", "transport", "tfl", "bus", "train", "metro", "subway"}
 	for _, keyword := range transportKeywords {
@@ -28,7 +28,7 @@ func categorizeTransaction(merchant, description string, amount float64) string 
 			return "Transport"
 		}
 	}
-	
+
 	// Food & Drink
 	foodKeywords := []string{"starbucks", "costa", "cafe", "restaurant", "mcdonalds", "kfc", "pizza", "food", "coffee", "tea"}
 	for _, keyword := range foodKeywords {
@@ -36,7 +36,7 @@ func categorizeTransaction(merchant, description string, amount float64) string 
 			return "Food & Drink"
 		}
 	}
-	
+
 	// Shopping
 	shoppingKeywords := []string{"amazon", "ebay", "shop", "store", "retail", "market", "mall", "clothing", "fashion"}
 	for _, keyword := range shoppingKeywords {
@@ -44,7 +44,7 @@ func categorizeTransaction(merchant, description string, amount float64) string 
 			return "Shopping"
 		}
 	}
-	
+
 	// Groceries
 	groceryKeywords := []string{"tesco", "sainsbury", "asda", "morrisons", "waitrose", "aldi", "lidl", "grocery", "supermarket"}
 	for _, keyword := range groceryKeywords {
@@ -52,7 +52,7 @@ func categorizeTransaction(merchant, description string, amount float64) string 
 			return "Groceries"
 		}
 	}
-	
+
 	// Entertainment
 	entertainmentKeywords := []string{"cinema", "movie", "netflix", "spotify", "apple music", "game", "entertainment", "theatre"}
 	for _, keyword := range entertainmentKeywords {
@@ -60,7 +60,7 @@ func categorizeTransaction(merchant, description string, amount float64) string 
 			return "Entertainment"
 		}
 	}
-	
+
 	// Bills & Utilities
 	billsKeywords := []string{"electric", "gas", "water", "internet", "phone", "insurance", "council tax", "utility", "energy"}
 	for _, keyword := range billsKeywords {
@@ -68,12 +68,12 @@ func categorizeTransaction(merchant, description string, amount float64) string 
 			return "Bills & Utilities"
 		}
 	}
-	
+
 	// ATM/Cash
 	if strings.Contains(merchantLower, "atm") || strings.Contains(merchantLower, "cash") {
 		return "ATM"
 	}
-	
+
 	// Large amounts might be rent/salary
 	if amount > 500 {
 		if strings.Contains(descriptionLower, "salary") || strings.Contains(descriptionLower, "wages") {
@@ -83,7 +83,7 @@ func categorizeTransaction(merchant, description string, amount float64) string 
 			return "Housing"
 		}
 	}
-	
+
 	return "Other"
 }
 
@@ -93,19 +93,19 @@ func handleCategorize(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	category := categorizeTransaction(req.Merchant, req.Description, req.Amount)
-	
+
 	response := CategoryResponse{
 		Category: category,
 	}
-	
+
 	c.JSON(http.StatusOK, response)
 }
 
 func main() {
 	r := gin.Default()
-	
+
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
@@ -113,10 +113,10 @@ func main() {
 			"service": "categorizer",
 		})
 	})
-	
+
 	// Categorization endpoint
 	r.POST("/categorize", handleCategorize)
-	
+
 	// Start server
 	r.Run(":9000")
 }
