@@ -8,9 +8,10 @@ import { Wallet, RefreshCw } from 'lucide-react'
 interface AccountsListProps {
   onAccountSelect: (account: Account) => void
   selectedAccount: Account | null
+  refreshTrigger?: number
 }
 
-export function AccountsList({ onAccountSelect, selectedAccount }: AccountsListProps) {
+export function AccountsList({ onAccountSelect, selectedAccount, refreshTrigger }: AccountsListProps) {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [triggeringTopUp, setTriggeringTopUp] = useState<string | null>(null)
@@ -42,7 +43,7 @@ export function AccountsList({ onAccountSelect, selectedAccount }: AccountsListP
 
   useEffect(() => {
     fetchAccounts()
-  }, [])
+  }, [refreshTrigger])
 
   if (loading) {
     return <div className="text-center py-4">Loading accounts...</div>

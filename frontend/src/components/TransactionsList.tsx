@@ -7,9 +7,10 @@ import { ArrowUpDown, TrendingDown, TrendingUp } from 'lucide-react'
 
 interface TransactionsListProps {
   accountId?: string
+  refreshTrigger?: number
 }
 
-export function TransactionsList({ accountId }: TransactionsListProps) {
+export function TransactionsList({ accountId, refreshTrigger }: TransactionsListProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -28,7 +29,7 @@ export function TransactionsList({ accountId }: TransactionsListProps) {
 
   useEffect(() => {
     fetchTransactions()
-  }, [accountId])
+  }, [accountId, refreshTrigger])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB', {
