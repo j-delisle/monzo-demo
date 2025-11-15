@@ -56,3 +56,26 @@ class CategorizationRequest(BaseModel):
 
 class CategorizationResponse(BaseModel):
     category: str
+
+# Auth Models
+class User(BaseModel):
+    id: str
+    email: str
+    name: str
+    created_at: datetime
+
+class UserCreate(BaseModel):
+    email: str
+    password: str
+    name: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    email: Optional[str] = None
