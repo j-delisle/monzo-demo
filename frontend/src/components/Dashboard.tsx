@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react'
-import type { Account } from '@/types'
-import { accountsApi } from '@/services/api'
-import { AccountsList } from '@/components/AccountsList'
-import { TransactionsList } from '@/components/TransactionsList'
+import type { Account, Transaction } from '@/types'
+import { accountsApi, transactionsApi, topUpApi } from '@/services/api'
+import { DashboardLayout } from '@/components/DashboardLayout'
+import { AccountOverviewCards, AccountCardsGrid } from '@/components/AccountOverviewCards'
+import { TransactionsTable } from '@/components/TransactionsTable'
 import { CreateTransactionForm } from '@/components/CreateTransactionForm'
 import { TopUpRulesManager } from '@/components/TopUpRulesManager'
-import { useAuth } from '@/contexts/AuthContext'
-import { Button } from '@/components/ui/button'
 
 export function Dashboard() {
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [transactions, setTransactions] = useState<Transaction[]>([])
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const { user, logout } = useAuth()
+  const [currentView, setCurrentView] = useState('overview')
+  const [loading, setLoading] = useState(true)
+  const [triggeringTopUp, setTriggeringTopUp] = useState<string | null>(null)
 
   const fetchAccounts = async () => {
     try {
@@ -24,13 +26,30 @@ export function Dashboard() {
           setSelectedAccount(updated)
         }
       }
+      if (!selectedAccount && data.length > 0) {
+        setSelectedAccount(data[0])
+      }
     } catch (error) {
       console.error('Failed to fetch accounts:', error)
     }
   }
 
+  const fetchTransactions = async () => {
+    try {
+      const data = await transactionsApi.getTransactions()
+      setTransactions(data)
+    } catch (error) {
+      console.error('Failed to fetch transactions:', error)
+    }
+  }
+
   useEffect(() => {
-    fetchAccounts()
+    const fetchData = async () => {
+      setLoading(true)
+      await Promise.all([fetchAccounts(), fetchTransactions()])
+      setLoading(false)
+    }
+    fetchData()
   }, [refreshTrigger])
 
   const handleTransactionCreated = () => {
@@ -41,57 +60,109 @@ export function Dashboard() {
     setSelectedAccount(account)
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <header className="mb-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              Monzo Demo Dashboard
-            </h1>
-            <p className="text-gray-600">
-              Welcome back, {user?.name}! Manage your accounts, transactions, and auto TopUp rules
-            </p>
-          </div>
-          <Button variant="outline" onClick={logout}>
-            Sign Out
-          </Button>
-        </header>
+  const handleTriggerTopUp = async (accountId: string) => {
+    setTriggeringTopUp(accountId)
+    try {
+      await topUpApi.triggerTopUp(accountId)
+      setRefreshTrigger(prev => prev + 1)
+    } catch (error) {
+      console.error('Failed to trigger topup:', error)
+    } finally {
+      setTriggeringTopUp(null)
+    }
+  }
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
-            <AccountsList 
-              onAccountSelect={handleAccountSelect}
+  const totalBalance = accounts.reduce((sum, account) => sum + account.balance, 0)
+  const recentTransactionsCount = transactions.filter(t => 
+    new Date(t.timestamp) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  ).length
+
+  const renderContent = () => {
+    switch (currentView) {
+      case 'overview':
+        return (
+          <div className="space-y-6">
+            <AccountOverviewCards 
+              accounts={accounts}
+              totalBalance={totalBalance}
+              recentTransactionsCount={recentTransactionsCount}
+            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <TransactionsTable 
+                transactions={transactions.slice(0, 10)} 
+                loading={loading}
+              />
+              <div className="space-y-4">
+                <AccountCardsGrid
+                  accounts={accounts}
+                  selectedAccount={selectedAccount}
+                  onAccountSelect={handleAccountSelect}
+                  onTriggerTopUp={handleTriggerTopUp}
+                  triggeringTopUp={triggeringTopUp}
+                />
+              </div>
+            </div>
+          </div>
+        )
+
+      case 'accounts':
+        return (
+          <div className="space-y-6">
+            <AccountOverviewCards 
+              accounts={accounts}
+              totalBalance={totalBalance}
+              recentTransactionsCount={recentTransactionsCount}
+            />
+            <AccountCardsGrid
+              accounts={accounts}
               selectedAccount={selectedAccount}
-              refreshTrigger={refreshTrigger}
+              onAccountSelect={handleAccountSelect}
+              onTriggerTopUp={handleTriggerTopUp}
+              triggeringTopUp={triggeringTopUp}
             />
           </div>
+        )
 
-          <div className="lg:col-span-1 space-y-6">
+      case 'transactions':
+        return (
+          <div className="space-y-6">
+            <TransactionsTable 
+              transactions={transactions} 
+              loading={loading}
+            />
+          </div>
+        )
+
+      case 'create':
+        return (
+          <div className="max-w-md mx-auto">
             <CreateTransactionForm 
               accounts={accounts}
-              onTransactionCreated={handleTransactionCreated}
-            />
-            <TransactionsList 
-              accountId={selectedAccount?.id}
-              refreshTrigger={refreshTrigger}
+              onTransactionCreated={() => {
+                handleTransactionCreated()
+                setCurrentView('transactions')
+              }}
             />
           </div>
+        )
 
-          <div className="lg:col-span-1">
+      case 'topup':
+        return (
+          <div className="max-w-4xl mx-auto">
             <TopUpRulesManager 
               selectedAccount={selectedAccount}
             />
           </div>
-        </div>
+        )
 
-        <footer className="mt-12 text-center text-gray-500">
-          <p>
-            Built with React, TypeScript, FastAPI, and Go • 
-            Auto TopUp & Transaction Categorization Demo
-          </p>
-        </footer>
-      </div>
-    </div>
+      default:
+        return null
+    }
+  }
+
+  return (
+    <DashboardLayout currentView={currentView} onViewChange={setCurrentView}>
+      {renderContent()}
+    </DashboardLayout>
   )
 }
