@@ -9,6 +9,8 @@ services:
       - categorizer
     environment:
       - CATEGORIZER_URL=http://categorizer:9000
+    volumes:
+      - ./data:/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
       interval: 30s
