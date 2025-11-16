@@ -114,7 +114,7 @@ export function TransactionsList({ accountId, refreshTrigger }: TransactionsList
                       ? 'text-green-600' 
                       : 'text-red-600'
                   }`}>
-                    {transaction.transaction_type === 'credit' ? '+' : '-'}£{transaction.amount.toFixed(2)}
+                    {transaction.transaction_type === 'credit' ? '+$' : '-$'}{new Intl.NumberFormat('en-US').format(transaction.amount)}
                   </p>
                   {transaction.category && (
                     <Badge 

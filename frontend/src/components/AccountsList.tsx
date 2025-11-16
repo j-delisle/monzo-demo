@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import type { Account } from '@/types'
 import { accountsApi, topUpApi } from '@/services/api'
 import { Wallet, RefreshCw } from 'lucide-react'
+import { formatCurrency } from '@/utils/currency'
 
 interface AccountsListProps {
   onAccountSelect: (account: Account) => void
@@ -84,7 +85,7 @@ export function AccountsList({ onAccountSelect, selectedAccount, refreshTrigger 
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">£{account.balance.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(account.balance)}</div>
             <CardDescription>Account ID: {account.id}</CardDescription>
           </CardContent>
         </Card>

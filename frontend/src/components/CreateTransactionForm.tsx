@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import type { CreateTransaction, Account } from '@/types'
 import { transactionsApi } from '@/services/api'
 import { Plus } from 'lucide-react'
+import { formatCurrency } from '@/utils/currency'
 
 interface CreateTransactionFormProps {
   accounts: Account[]
@@ -92,7 +93,7 @@ export function CreateTransactionForm({ accounts, onTransactionCreated }: Create
             >
               {accounts.map(account => (
                 <option key={account.id} value={account.id}>
-                  {account.name} (£{account.balance.toFixed(2)})
+                  {account.name} ({formatCurrency(account.balance)})
                 </option>
               ))}
             </select>
@@ -122,7 +123,7 @@ export function CreateTransactionForm({ accounts, onTransactionCreated }: Create
           </div>
 
           <div>
-            <Label htmlFor="amount">Amount (£)</Label>
+            <Label htmlFor="amount">Amount ($)</Label>
             <Input
               id="amount"
               type="number"

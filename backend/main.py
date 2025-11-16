@@ -197,7 +197,7 @@ async def check_and_trigger_topup(account_id: str):
 
             return {
                 "triggered": True,
-                "message": f"TopUp of £{rule.topup_amount} triggered. New balance: £{new_balance}"
+                "message": f"TopUp of ${rule.topup_amount:,.2f} triggered. New balance: ${new_balance:,.2f}"
             }
 
     return {"triggered": False, "message": "No topup rules triggered"}

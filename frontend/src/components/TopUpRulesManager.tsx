@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import type { TopUpRule, CreateTopUpRule, Account, TopUpEvent } from '@/types'
 import { topUpApi } from '@/services/api'
 import { Settings, Plus, Clock } from 'lucide-react'
+import { formatCurrency } from '@/utils/currency'
 
 interface TopUpRulesManagerProps {
   selectedAccount: Account | null
@@ -125,7 +126,7 @@ export function TopUpRulesManager({ selectedAccount }: TopUpRulesManagerProps) {
             <form onSubmit={handleSubmit} className="space-y-4 p-4 border rounded-lg bg-muted/50">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="threshold">Threshold (£)</Label>
+                  <Label htmlFor="threshold">Threshold ($)</Label>
                   <Input
                     id="threshold"
                     type="number"
@@ -141,7 +142,7 @@ export function TopUpRulesManager({ selectedAccount }: TopUpRulesManagerProps) {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="topup_amount">TopUp Amount (£)</Label>
+                  <Label htmlFor="topup_amount">TopUp Amount ($)</Label>
                   <Input
                     id="topup_amount"
                     type="number"
@@ -171,7 +172,7 @@ export function TopUpRulesManager({ selectedAccount }: TopUpRulesManagerProps) {
                 <div key={rule.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
                     <p className="font-medium">
-                      TopUp £{rule.topup_amount.toFixed(2)} when balance below £{rule.threshold.toFixed(2)}
+                      TopUp {formatCurrency(rule.topup_amount)} when balance below {formatCurrency(rule.threshold)}
                     </p>
                     <p className="text-sm text-muted-foreground">Rule ID: {rule.id}</p>
                   </div>
@@ -198,9 +199,9 @@ export function TopUpRulesManager({ selectedAccount }: TopUpRulesManagerProps) {
               {events.slice(0, 5).map(event => (
                 <div key={event.id} className="flex items-center justify-between p-3 border rounded-lg bg-green-50">
                   <div>
-                    <p className="font-medium">£{event.amount.toFixed(2)} TopUp</p>
+                    <p className="font-medium">{formatCurrency(event.amount)} TopUp</p>
                     <p className="text-sm text-muted-foreground">
-                      Triggered at balance: £{event.triggered_balance.toFixed(2)}
+                      Triggered at balance: {formatCurrency(event.triggered_balance)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {formatDate(event.timestamp)}
