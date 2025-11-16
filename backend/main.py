@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from models import *
-from database import db
+from database.repository import db
+from database.init import init_database
 from auth.routes import router as auth_router
 from auth.auth import get_current_user
 import httpx
@@ -15,6 +16,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Monzo Demo API", version="1.0.0")
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database on startup"""
+    init_database()
 
 app.add_middleware(
     CORSMiddleware,

@@ -47,20 +47,20 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
+
     token_data = verify_token(credentials.credentials)
     if token_data is None:
         raise credentials_exception
-    
-    from database import db  # Import here to avoid circular imports
+
+    from database.repository import db  # Import here to avoid circular imports
     user = db.get_user_by_email(token_data.email)
     if user is None:
         raise credentials_exception
-    
+
     return user
 
 def authenticate_user(email: str, password: str) -> Optional[User]:
-    from database import db
+    from database.repository import db
     user = db.get_user_by_email(email)
     if not user:
         return None
@@ -73,7 +73,7 @@ def create_demo_user() -> User:
     """Create a demo user for quick access"""
     return User(
         id="demo_user",
-        email="demo@monzo.com", 
+        email="demo@monzo.com",
         name="Demo User",
         created_at=datetime.now()
     )

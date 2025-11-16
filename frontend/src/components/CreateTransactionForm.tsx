@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,9 +22,16 @@ export function CreateTransactionForm({ accounts, onTransactionCreated }: Create
   })
   const [loading, setLoading] = useState(false)
 
+  // Update account_id when accounts are loaded
+  useEffect(() => {
+    if (accounts.length > 0 && !formData.account_id) {
+      setFormData(prev => ({ ...prev, account_id: accounts[0].id }))
+    }
+  }, [accounts, formData.account_id])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.merchant || formData.amount <= 0) return
+    if (!formData.merchant || formData.amount <= 0 || !formData.account_id) return
 
     setLoading(true)
     try {
@@ -46,6 +53,23 @@ export function CreateTransactionForm({ accounts, onTransactionCreated }: Create
 
   const handleChange = (field: keyof CreateTransaction, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Don't render form if no accounts are available
+  if (accounts.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            Create Transaction
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">Loading accounts...</p>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
