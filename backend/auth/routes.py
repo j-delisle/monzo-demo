@@ -11,6 +11,9 @@ from auth.auth import (
 from database.repository import db
 import uuid
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -61,13 +64,29 @@ async def signup(user_data: UserCreate):
 
 @router.post("/login", response_model=Token)
 async def login(user_credentials: UserLogin):
-    user = authenticate_user(user_credentials.email, user_credentials.password)
-    if not user:
+    logger.info(f"Login attempt for email: {user_credentials.email}")
+    
+    # Check if user exists first
+    user_exists = db.get_user_by_email(user_credentials.email)
+    if not user_exists:
+        logger.warning(f"Login failed: User {user_credentials.email} not found")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    logger.info(f"User {user_credentials.email} found, checking password")
+    user = authenticate_user(user_credentials.email, user_credentials.password)
+    if not user:
+        logger.warning(f"Login failed: Invalid password for {user_credentials.email}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    logger.info(f"Login successful for {user_credentials.email}")
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
@@ -77,13 +96,17 @@ async def login(user_credentials: UserLogin):
 @router.post("/demo-login", response_model=Token)
 async def demo_login():
     """Quick login for demo purposes"""
+    logger.info("Demo login attempt")
+    
     user = db.get_user_by_email("demo@monzo.com")
     if not user:
+        logger.error("Demo login failed: Demo user not found in database")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Demo user not found"
         )
 
+    logger.info(f"Demo login successful for user: {user.email}")
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
