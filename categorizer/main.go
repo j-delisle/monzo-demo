@@ -21,6 +21,18 @@ func categorizeTransaction(merchant, description string, amount float64) string 
 	merchantLower := strings.ToLower(merchant)
 	descriptionLower := strings.ToLower(description)
 
+	// Check if amount is positive or if income keywords are present
+	if amount > 0 {
+		return "Income"
+	}
+
+	incomeKeywords := []string{"salary", "deposit", "income", "gift"}
+	for _, keyword := range incomeKeywords {
+		if strings.Contains(merchantLower, keyword) || strings.Contains(descriptionLower, keyword) {
+			return "Income"
+		}
+	}
+
 	// Transport
 	transportKeywords := []string{"uber", "lyft", "taxi", "transport", "tfl", "bus", "train", "metro", "subway"}
 	for _, keyword := range transportKeywords {
@@ -75,7 +87,7 @@ func categorizeTransaction(merchant, description string, amount float64) string 
 	}
 
 	// Large amounts might be rent/salary
-	if amount > 500 {
+	if amount > 700 {
 		if strings.Contains(descriptionLower, "salary") || strings.Contains(descriptionLower, "wages") {
 			return "Income"
 		}
