@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -8,21 +9,22 @@ import (
 )
 
 type TransactionRequest struct {
-	Merchant    string  `json:"merchant" binding:"required"`
-	Amount      float64 `json:"amount" binding:"required"`
-	Description string  `json:"description"`
+	Merchant        string  `json:"merchant" binding:"required"`
+	Amount          float64 `json:"amount" binding:"required"`
+	Description     string  `json:"description"`
+	TransactionType string  `json:"transaction_type" binding:"required"`
 }
 
 type CategoryResponse struct {
 	Category string `json:"category"`
 }
 
-func categorizeTransaction(merchant, description string, amount float64) string {
+func categorizeTransaction(merchant, description string, amount float64, transactionType string) string {
 	merchantLower := strings.ToLower(merchant)
 	descriptionLower := strings.ToLower(description)
+	transactionTypeLower := strings.ToLower(transactionType)
 
-	// Check if amount is positive or if income keywords are present
-	if amount > 0 {
+	if transactionTypeLower == "credit" {
 		return "Income"
 	}
 
@@ -102,11 +104,16 @@ func categorizeTransaction(merchant, description string, amount float64) string 
 func handleCategorize(c *gin.Context) {
 	var req TransactionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("Bad request: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	category := categorizeTransaction(req.Merchant, req.Description, req.Amount)
+	log.Printf("Categorizing transaction - Merchant: %s, Amount: %.2f, Credit: %t", req.Merchant, req.Amount, req.TransactionType)
+
+	category := categorizeTransaction(req.Merchant, req.Description, req.Amount, req.TransactionType)
+
+	log.Printf("Categorized as: %s", category)
 
 	response := CategoryResponse{
 		Category: category,
@@ -116,6 +123,8 @@ func handleCategorize(c *gin.Context) {
 }
 
 func main() {
+	log.Println("Starting categorizer service...")
+
 	r := gin.Default()
 
 	// Health check
@@ -130,5 +139,6 @@ func main() {
 	r.POST("/categorize", handleCategorize)
 
 	// Start server
+	log.Println("Server listening on port 9000")
 	r.Run(":9000")
 }

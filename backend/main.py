@@ -78,6 +78,7 @@ async def create_transaction(transaction_data: CreateTransaction, current_user: 
         raise HTTPException(status_code=404, detail="Account not found")
     logger.info(f"Found account: {account}")
 
+    logger.info(f'trans act data: {transaction_data}')
     # Get category from Go microservice
     category = "Other"
     try:
@@ -87,12 +88,14 @@ async def create_transaction(transaction_data: CreateTransaction, current_user: 
                 json={
                     "merchant": transaction_data.merchant,
                     "amount": transaction_data.amount,
-                    "description": transaction_data.description
+                    "description": transaction_data.description,
+                    "transaction_type": transaction_data.transaction_type
                 },
                 timeout=5.0
             )
             if response.status_code == 200:
                 category = response.json().get("category", "Other")
+                logger.info(f'Category from Go microservice: {category}')
     except Exception as e:
         print(f"Failed to categorize transaction: {e}")
 
