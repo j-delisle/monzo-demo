@@ -94,15 +94,13 @@ export function Dashboard() {
               totalBalance={totalBalance}
               recentTransactionsCount={recentTransactionsCount}
             />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <TransactionsTable
-                transactions={transactions.slice(0, 10)}
-                loading={loading}
-              />
-              <div className="space-y-4">
-                <AccountCardsDisplay accounts={accounts} />
-              </div>
+            <div className="space-y-4">
+              <AccountCardsDisplay accounts={accounts} />
             </div>
+            <TransactionsTable
+              transactions={transactions.slice(0, 10)}
+              loading={loading}
+            />
           </div>
         );
 
