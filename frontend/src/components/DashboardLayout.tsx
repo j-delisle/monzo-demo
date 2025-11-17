@@ -1,40 +1,42 @@
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { useAuth } from '@/contexts/AuthContext'
-import { 
-  Home, 
-  CreditCard, 
-  ArrowUpDown, 
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  Home,
+  CreditCard,
+  ArrowUpDown,
   LogOut,
   Menu,
   X,
   TrendingUp,
-  Plus
-} from 'lucide-react'
+} from "lucide-react";
 
 interface DashboardLayoutProps {
-  children: React.ReactNode
-  currentView: string
-  onViewChange: (view: string) => void
+  children: React.ReactNode;
+  currentView: string;
+  onViewChange: (view: string) => void;
 }
 
-export function DashboardLayout({ children, currentView, onViewChange }: DashboardLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { user, logout } = useAuth()
+export function DashboardLayout({
+  children,
+  currentView,
+  onViewChange,
+}: DashboardLayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, logout } = useAuth();
 
   const navigation = [
-    { name: 'Overview', icon: Home, value: 'overview' },
-    { name: 'Accounts', icon: CreditCard, value: 'accounts' },
-    { name: 'Transactions', icon: ArrowUpDown, value: 'transactions' },
-    { name: 'Top Up Rules', icon: TrendingUp, value: 'topup' },
-    { name: 'New Transaction', icon: Plus, value: 'create' },
-  ]
+    { name: "Overview", icon: Home, value: "overview" },
+    { name: "Accounts", icon: CreditCard, value: "accounts" },
+    { name: "Transactions", icon: ArrowUpDown, value: "transactions" },
+    { name: "Top Up Rules", icon: TrendingUp, value: "topup" },
+  ];
 
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 flex z-40 md:hidden"
           onClick={() => setSidebarOpen(false)}
         >
@@ -43,25 +45,26 @@ export function DashboardLayout({ children, currentView, onViewChange }: Dashboa
       )}
 
       {/* Sidebar */}
-      <div className={`
+      <div
+        className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         transition-transform duration-300 ease-in-out
         md:translate-x-0 md:static md:inset-0
-      `}>
+      `}
+      >
         <div className="flex items-center justify-between h-16 px-4 border-b">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <CreditCard className="h-8 w-8 text-blue-600" />
             </div>
             <div className="ml-3">
-              <h1 className="text-lg font-semibold text-gray-900">Monzo Demo</h1>
+              <h1 className="text-lg font-semibold text-gray-900">
+                Monzo Demo
+              </h1>
             </div>
           </div>
-          <button
-            className="md:hidden"
-            onClick={() => setSidebarOpen(false)}
-          >
+          <button className="md:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="h-6 w-6" />
           </button>
         </div>
@@ -72,14 +75,15 @@ export function DashboardLayout({ children, currentView, onViewChange }: Dashboa
               <button
                 key={item.name}
                 onClick={() => {
-                  onViewChange(item.value)
-                  setSidebarOpen(false)
+                  onViewChange(item.value);
+                  setSidebarOpen(false);
                 }}
                 className={`
                   group flex items-center px-3 py-2 text-sm font-medium rounded-md w-full text-left
-                  ${currentView === item.value
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  ${
+                    currentView === item.value
+                      ? "bg-blue-100 text-blue-700"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                   }
                 `}
               >
@@ -104,16 +108,9 @@ export function DashboardLayout({ children, currentView, onViewChange }: Dashboa
               <p className="text-sm font-medium text-gray-900 truncate">
                 {user?.name}
               </p>
-              <p className="text-xs text-gray-500 truncate">
-                {user?.email}
-              </p>
+              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={logout}
-              className="ml-2"
-            >
+            <Button variant="ghost" size="sm" onClick={logout} className="ml-2">
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
@@ -134,7 +131,8 @@ export function DashboardLayout({ children, currentView, onViewChange }: Dashboa
                   <Menu className="h-6 w-6" />
                 </button>
                 <h1 className="ml-4 text-xl font-semibold text-gray-900 md:ml-0">
-                  {navigation.find(item => item.value === currentView)?.name || 'Dashboard'}
+                  {navigation.find((item) => item.value === currentView)
+                    ?.name || "Dashboard"}
                 </h1>
               </div>
             </div>
@@ -149,5 +147,5 @@ export function DashboardLayout({ children, currentView, onViewChange }: Dashboa
         </main>
       </div>
     </div>
-  )
+  );
 }

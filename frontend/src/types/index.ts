@@ -22,6 +22,7 @@ export interface CreateTransaction {
   merchant: string
   description: string
   transaction_type: 'debit' | 'credit'
+  category?: string
 }
 
 export interface TopUpRule {
