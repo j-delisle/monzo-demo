@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request, Depends
+from fastapi import FastAPI, HTTPException, Request, Depends, Response
 from fastapi.middleware.cors import CORSMiddleware
 from models import (
     CreateTransaction, Transaction as TransactionResponse,
@@ -18,10 +18,22 @@ import httpx
 from datetime import datetime
 from typing import List
 import logging
+import time
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Import monitoring modules
+from metrics import (
+    get_metrics, record_transaction, record_topup, record_api_request,
+    record_categorizer_request, record_categorizer_failure, track_request_duration,
+    track_categorizer_duration, update_accounts_count, update_total_balance
+)
+from logging_config import (
+    setup_logging, get_logger, log_transaction_created, log_topup_triggered,
+    log_categorizer_request, log_api_request
+)
+
+# Set up structured logging
+setup_logging()
+logger = get_logger("api")
 
 app = FastAPI(title="Monzo Demo API", version="1.0.0")
 
@@ -38,18 +50,57 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Metrics endpoint
+@app.get("/metrics")
+async def metrics():
+    """Prometheus metrics endpoint"""
+    # Update system-wide metrics before serving
+    accounts = db.get_accounts()
+    update_accounts_count(len(accounts))
+    total_balance = sum(acc.balance for acc in accounts)
+    update_total_balance(total_balance)
+    
+    return Response(content=get_metrics(), media_type="text/plain")
+
+# Request tracking middleware
+@app.middleware("http")
+async def track_requests(request: Request, call_next):
+    start_time = time.time()
+    
+    # Skip metrics endpoint from tracking to avoid recursion
+    if request.url.path == "/metrics":
+        return await call_next(request)
+    
+    response = await call_next(request)
+    
+    duration = time.time() - start_time
+    duration_ms = duration * 1000
+    
+    # Record metrics
+    record_api_request(
+        method=request.method,
+        endpoint=request.url.path,
+        status_code=response.status_code
+    )
+    
+    # Log request
+    user_id = getattr(request.state, 'user_id', None)
+    log_api_request(
+        logger=logger,
+        method=request.method,
+        endpoint=request.url.path,
+        status_code=response.status_code,
+        duration_ms=duration_ms,
+        user_id=user_id
+    )
+    
+    return response
+
 # Include auth routes
 app.include_router(auth_router)
 
 CATEGORIZER_URL = "http://categorizer:9000"
 
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    logger.info(f"Incoming request: {request.method} {request.url.path} from {request.client.host}")
-    logger.info(f"Headers: {dict(request.headers)}")
-    response = await call_next(request)
-    logger.info(f"Response status: {response.status_code}")
-    return response
 
 @app.get("/")
 async def root():
@@ -79,34 +130,56 @@ async def get_transactions(account_id: int = None, current_user: User = Depends(
 
 @app.post("/transactions", response_model=TransactionResponse)
 async def create_transaction(transaction_data: CreateTransaction, current_user: User = Depends(get_current_user)):
-    logger.info(f"Creating transaction: {transaction_data}")
+    # Validate account access
     account = db.get_account_by_user(transaction_data.account_id, current_user.id)
     if not account:
-        logger.error(f"Account not found: {transaction_data.account_id}")
         raise HTTPException(status_code=404, detail="Account not found")
-    logger.info(f"Found account: {account}")
 
-    logger.info(f'trans act data: {transaction_data}')
-    # Get category from Go microservice
+    # Get category from Go microservice with metrics tracking
     category = "Other"
+    categorizer_success = False
+    
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{CATEGORIZER_URL}/categorize",
-                json={
-                    "merchant": transaction_data.merchant,
-                    "amount": transaction_data.amount,
-                    "description": transaction_data.description,
-                    "transaction_type": transaction_data.transaction_type
-                },
-                timeout=5.0
-            )
-            if response.status_code == 200:
-                category = response.json().get("category", "Other")
-                logger.info(f'Category from Go microservice: {category}')
+        with track_categorizer_duration():
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{CATEGORIZER_URL}/categorize",
+                    json={
+                        "merchant": transaction_data.merchant,
+                        "amount": transaction_data.amount,
+                        "description": transaction_data.description,
+                        "transaction_type": transaction_data.transaction_type
+                    },
+                    timeout=5.0
+                )
+                
+                if response.status_code == 200:
+                    category = response.json().get("category", "Other")
+                    categorizer_success = True
+                    record_categorizer_request("success")
+                else:
+                    record_categorizer_request("error")
+                    
     except Exception as e:
-        print(f"Failed to categorize transaction: {e}")
+        record_categorizer_failure()
+        record_categorizer_request("failure")
+        logger.warning(f"Categorizer service failed: {str(e)}", extra={
+            "merchant": transaction_data.merchant,
+            "error_type": type(e).__name__,
+            "event_type": "categorizer_error"
+        })
 
+    # Log categorizer request
+    log_categorizer_request(
+        logger=logger,
+        merchant=transaction_data.merchant,
+        amount=transaction_data.amount,
+        category=category,
+        duration_ms=0,  # Duration tracked separately by context manager
+        success=categorizer_success
+    )
+
+    # Create transaction
     transaction = Transaction(
         account_id=transaction_data.account_id,
         amount=transaction_data.amount,
@@ -124,14 +197,32 @@ async def create_transaction(transaction_data: CreateTransaction, current_user: 
     else:
         new_balance += transaction_data.amount
 
+    # Save to database
     db.update_account_balance(transaction_data.account_id, new_balance)
-    db.add_transaction(transaction)
+    created_transaction = db.add_transaction(transaction)
+
+    # Record metrics
+    record_transaction(
+        transaction_type=transaction_data.transaction_type,
+        account_id=str(account.id),
+        category=category
+    )
+
+    # Log transaction creation
+    log_transaction_created(
+        logger=logger,
+        user_id=str(current_user.id),
+        account_id=str(account.id),
+        transaction_id=str(created_transaction.id),
+        amount=transaction_data.amount,
+        category=category,
+        merchant=transaction_data.merchant
+    )
 
     # Check for auto topup
     await check_and_trigger_topup(transaction_data.account_id)
 
-    logger.info(f"Transaction created successfully: {transaction}")
-    return transaction
+    return created_transaction
 
 @app.get("/topup-rules", response_model=List[TopUpRuleResponse])
 async def get_topup_rules(account_id: int = None, current_user: User = Depends(get_current_user)):
@@ -193,14 +284,27 @@ async def check_and_trigger_topup(account_id: int):
             new_balance = account.balance + rule.topup_amount
             db.update_account_balance(account_id, new_balance)
 
-            # Log topup event
+            # Create topup event
             event = TopUpEvent(
                 account_id=account_id,
                 amount=rule.topup_amount,
                 triggered_balance=account.balance,
                 timestamp=datetime.now()
             )
-            db.add_topup_event(event)
+            created_event = db.add_topup_event(event)
+
+            # Record metrics
+            record_topup(str(account_id))
+
+            # Log topup trigger
+            log_topup_triggered(
+                logger=logger,
+                user_id=str(account.user_id),
+                account_id=str(account_id),
+                amount=rule.topup_amount,
+                triggered_balance=account.balance,
+                rule_id=str(rule.id)
+            )
 
             return {
                 "triggered": True,
