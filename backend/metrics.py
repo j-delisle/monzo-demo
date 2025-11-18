@@ -114,7 +114,7 @@ def track_categorizer_duration():
 
 def get_metrics() -> str:
     """Get all metrics in Prometheus format"""
-    return generate_latest(registry)
+    return generate_latest(registry).decode('utf-8')
 
 def record_transaction(transaction_type: str, account_id: str, category: str):
     """Record a transaction creation"""

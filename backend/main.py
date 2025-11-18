@@ -50,7 +50,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Metrics endpoint
+# Prometheus metrics endpoint
 @app.get("/metrics")
 async def metrics():
     """Prometheus metrics endpoint"""
@@ -61,6 +61,115 @@ async def metrics():
     update_total_balance(total_balance)
     
     return Response(content=get_metrics(), media_type="text/plain")
+
+# JSON metrics endpoint for frontend
+@app.get("/api/metrics")
+async def api_metrics():
+    """JSON metrics endpoint for frontend dashboard"""
+    try:
+        # Update system-wide metrics
+        accounts = db.get_accounts()
+        update_accounts_count(len(accounts))
+        total_balance = sum(acc.balance for acc in accounts)
+        update_total_balance(total_balance)
+        
+        # Get our own metrics
+        backend_metrics = get_metrics()
+        
+        # Fetch Go categorizer metrics
+        categorizer_metrics = ""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{CATEGORIZER_URL}/metrics", timeout=5.0)
+                if response.status_code == 200:
+                    categorizer_metrics = response.text
+        except Exception as e:
+            logger.warning(f"Failed to fetch categorizer metrics: {str(e)}")
+        
+        # Parse metrics and return JSON
+        parsed_metrics = parse_prometheus_metrics(backend_metrics, categorizer_metrics)
+        return parsed_metrics
+        
+    except Exception as e:
+        logger.error(f"Failed to get metrics: {str(e)}")
+        return {"error": "Failed to retrieve metrics"}
+
+def parse_prometheus_metrics(backend_metrics: str, categorizer_metrics: str) -> dict:
+    """Parse Prometheus format metrics and return structured JSON"""
+    metrics = {
+        "timestamp": datetime.now().isoformat(),
+        "backend": {},
+        "categorizer": {},
+        "summary": {}
+    }
+    
+    # Helper function to extract metric value
+    def extract_metric_value(lines: List[str], metric_name: str) -> float:
+        for line in lines:
+            if line.startswith(metric_name) and not line.startswith(f"{metric_name}_"):
+                try:
+                    return float(line.split()[-1])
+                except (IndexError, ValueError):
+                    continue
+        return 0.0
+    
+    def extract_counter_by_label(lines: List[str], metric_name: str, label_filters: dict = None) -> float:
+        total = 0.0
+        for line in lines:
+            if line.startswith(metric_name) and "{" in line:
+                if label_filters:
+                    # Check if all label filters match
+                    if all(f'{key}="{value}"' in line for key, value in label_filters.items()):
+                        try:
+                            total += float(line.split()[-1])
+                        except (IndexError, ValueError):
+                            continue
+                else:
+                    try:
+                        total += float(line.split()[-1])
+                    except (IndexError, ValueError):
+                        continue
+        return total
+    
+    # Parse backend metrics
+    backend_lines = backend_metrics.strip().split('\n')
+    backend_lines = [line for line in backend_lines if not line.startswith('#') and line.strip()]
+    
+    metrics["backend"] = {
+        "transactions_total": extract_counter_by_label(backend_lines, "transactions_total"),
+        "topups_triggered_total": extract_metric_value(backend_lines, "topups_triggered_total"),
+        "api_requests_total": extract_counter_by_label(backend_lines, "api_requests_total"),
+        "categorizer_requests_success": extract_counter_by_label(backend_lines, "categorizer_requests_total", {"status": "success"}),
+        "categorizer_requests_failure": extract_counter_by_label(backend_lines, "categorizer_requests_total", {"status": "failure"}),
+        "accounts_count": extract_metric_value(backend_lines, "accounts_count"),
+        "total_balance": extract_metric_value(backend_lines, "total_balance")
+    }
+    
+    # Parse categorizer metrics
+    if categorizer_metrics:
+        categorizer_lines = categorizer_metrics.strip().split('\n')
+        categorizer_lines = [line for line in categorizer_lines if not line.startswith('#') and line.strip()]
+        
+        metrics["categorizer"] = {
+            "categorization_requests_total": extract_counter_by_label(categorizer_lines, "categorization_requests_total"),
+            "categorization_errors_total": extract_counter_by_label(categorizer_lines, "categorization_errors_total"),
+            "http_requests_total": extract_counter_by_label(categorizer_lines, "http_requests_total"),
+        }
+    
+    # Calculate summary metrics
+    total_categorizer_requests = metrics["categorizer"].get("categorization_requests_total", 0)
+    total_categorizer_errors = metrics["categorizer"].get("categorization_errors_total", 0)
+    
+    metrics["summary"] = {
+        "total_transactions": metrics["backend"]["transactions_total"],
+        "total_accounts": metrics["backend"]["accounts_count"],
+        "total_balance": metrics["backend"]["total_balance"],
+        "categorizer_success_rate": ((total_categorizer_requests - total_categorizer_errors) / max(total_categorizer_requests, 1)) * 100,
+        "categorizer_error_rate": total_categorizer_errors,
+        "system_health": "healthy" if total_categorizer_errors < 10 else "degraded"
+    }
+    
+    return metrics
 
 # Request tracking middleware
 @app.middleware("http")
