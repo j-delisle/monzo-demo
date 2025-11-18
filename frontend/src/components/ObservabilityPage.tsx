@@ -31,7 +31,7 @@ const chartConfig = {
 export function ObservabilityPage() {
   const [metrics, setMetrics] = useState<MetricsData | null>(null);
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesDataPoint[]>([]);
-  const [categoryBreakdown] = useState<CategoryBreakdown[]>(MetricsApiService.getCategoryBreakdown());
+  const [categoryBreakdown, setCategoryBreakdown] = useState<CategoryBreakdown[]>([]);
   const [refreshTime, setRefreshTime] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,9 +40,17 @@ export function ObservabilityPage() {
     try {
       setLoading(true);
       setError(null);
-      const fetchedMetrics = await MetricsApiService.getMetrics();
+      
+      // Fetch all data in parallel
+      const [fetchedMetrics, timeSeriesData, categoryData] = await Promise.all([
+        MetricsApiService.getMetrics(),
+        MetricsApiService.getTimeSeriesData(),
+        MetricsApiService.getCategoryBreakdown()
+      ]);
+      
       setMetrics(fetchedMetrics);
-      setTimeSeriesData(MetricsApiService.generateTimeSeriesData(fetchedMetrics));
+      setTimeSeriesData(timeSeriesData);
+      setCategoryBreakdown(categoryData);
       setRefreshTime(new Date());
     } catch (err: any) {
       const errorMessage = err?.response?.data?.detail || err?.message || 'Failed to fetch metrics from backend';
@@ -131,7 +139,7 @@ export function ObservabilityPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{(metrics?.summary?.total_transactions || 0).toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">+12% from yesterday</p>
+            <p className="text-xs text-muted-foreground">Real-time data</p>
           </CardContent>
         </Card>
 

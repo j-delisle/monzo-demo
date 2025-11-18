@@ -55,7 +55,7 @@ class SQLiteRepository:
             db.add(db_user)
             db.commit()
             db.refresh(db_user)  # Get the auto-generated ID
-            
+
             # Return user with the generated ID
             user.id = db_user.id
             return user
@@ -190,7 +190,7 @@ class SQLiteRepository:
             db.add(db_account)
             db.commit()
             db.refresh(db_account)  # Get the auto-generated ID
-            
+
             # Return account with the generated ID and UUID
             return Account(
                 id=db_account.id,
@@ -201,7 +201,7 @@ class SQLiteRepository:
             )
         finally:
             db.close()
-    
+
     def update_account_balance(self, account_id: str, new_balance: float):
         db = self._get_db()
         try:
@@ -234,6 +234,24 @@ class SQLiteRepository:
         finally:
             db.close()
 
+    def get_all_transactions(self) -> List[Transaction]:
+        """Get ALL transactions from the database - for observability/metrics purposes"""
+        db = self._get_db()
+        try:
+            db_transactions = db.query(DBTransaction).order_by(DBTransaction.timestamp.desc()).all()
+            return [Transaction(
+                id=txn.id,
+                account_id=txn.account_id,
+                amount=txn.amount,
+                merchant=txn.merchant,
+                description=txn.description,
+                category=txn.category,
+                transaction_type=txn.transaction_type,
+                timestamp=txn.timestamp
+            ) for txn in db_transactions]
+        finally:
+            db.close()
+
     def add_transaction(self, transaction: Transaction) -> Transaction:
         db = self._get_db()
         try:
@@ -249,7 +267,7 @@ class SQLiteRepository:
             db.add(db_transaction)
             db.commit()
             db.refresh(db_transaction)  # Get the auto-generated ID
-            
+
             # Return transaction with the generated ID
             transaction.id = db_transaction.id
             return transaction
@@ -287,7 +305,7 @@ class SQLiteRepository:
             db.add(db_rule)
             db.commit()
             db.refresh(db_rule)  # Get the auto-generated ID
-            
+
             # Return rule with the generated ID
             rule.id = db_rule.id
             return rule
@@ -325,7 +343,7 @@ class SQLiteRepository:
             db.add(db_event)
             db.commit()
             db.refresh(db_event)  # Get the auto-generated ID
-            
+
             # Return event with the generated ID
             event.id = db_event.id
             return event
