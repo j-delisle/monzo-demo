@@ -1,60 +1,67 @@
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import type { CreateTransaction, Account } from '@/types'
-import { transactionsApi } from '@/services/api'
-import { Plus } from 'lucide-react'
-import { formatCurrency } from '@/utils/currency'
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import type { CreateTransaction, Account } from "@/types";
+import { transactionsApi } from "@/services/api";
+import { Plus } from "lucide-react";
+import { formatCurrency } from "@/utils/currency";
 
 interface CreateTransactionFormProps {
-  accounts: Account[]
-  onTransactionCreated: () => void
+  accounts: Account[];
+  onTransactionCreated: () => void;
 }
 
-export function CreateTransactionForm({ accounts, onTransactionCreated }: CreateTransactionFormProps) {
+export function CreateTransactionForm({
+  accounts,
+  onTransactionCreated,
+}: CreateTransactionFormProps) {
   const [formData, setFormData] = useState<CreateTransaction>({
     account_id: accounts[0]?.id || 0,
     amount: 0,
-    merchant: '',
-    description: '',
-    transaction_type: 'debit'
-  })
-  const [loading, setLoading] = useState(false)
+    merchant: "",
+    description: "",
+    transaction_type: "debit",
+  });
+  const [loading, setLoading] = useState(false);
 
   // Update account_id when accounts are loaded
   useEffect(() => {
     if (accounts.length > 0 && !formData.account_id) {
-      setFormData(prev => ({ ...prev, account_id: accounts[0].id }))
+      setFormData((prev) => ({ ...prev, account_id: accounts[0].id }));
     }
-  }, [accounts, formData.account_id])
+  }, [accounts, formData.account_id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.merchant || formData.amount <= 0 || !formData.account_id) return
+    e.preventDefault();
+    if (!formData.merchant || formData.amount <= 0 || !formData.account_id)
+      return;
 
-    setLoading(true)
+    setLoading(true);
     try {
-      await transactionsApi.createTransaction(formData)
+      await transactionsApi.createTransaction(formData);
       setFormData({
         account_id: accounts[0]?.id || 0,
         amount: 0,
-        merchant: '',
-        description: '',
-        transaction_type: 'debit'
-      })
-      onTransactionCreated()
+        merchant: "",
+        description: "",
+        transaction_type: "debit",
+      });
+      onTransactionCreated();
     } catch (error) {
-      console.error('Failed to create transaction:', error)
+      console.error("Failed to create transaction:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const handleChange = (field: keyof CreateTransaction, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-  }
+  const handleChange = (
+    field: keyof CreateTransaction,
+    value: string | number,
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   // Don't render form if no accounts are available
   if (accounts.length === 0) {
@@ -70,7 +77,7 @@ export function CreateTransactionForm({ accounts, onTransactionCreated }: Create
           <p className="text-muted-foreground">Loading accounts...</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -88,10 +95,12 @@ export function CreateTransactionForm({ accounts, onTransactionCreated }: Create
             <select
               id="account"
               value={formData.account_id}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleChange('account_id', e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                handleChange("account_id", e.target.value)
+              }
               className="w-full p-2 border border-input rounded-md bg-background"
             >
-              {accounts.map(account => (
+              {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
                   {account.name} ({formatCurrency(account.balance)})
                 </option>
@@ -106,7 +115,9 @@ export function CreateTransactionForm({ accounts, onTransactionCreated }: Create
               type="text"
               placeholder="e.g. Starbucks, Uber, Tesco"
               value={formData.merchant}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('merchant', e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                handleChange("merchant", e.target.value)
+              }
               required
             />
           </div>
@@ -118,7 +129,9 @@ export function CreateTransactionForm({ accounts, onTransactionCreated }: Create
               type="text"
               placeholder="Transaction description"
               value={formData.description}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('description', e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                handleChange("description", e.target.value)
+              }
             />
           </div>
 
@@ -130,8 +143,10 @@ export function CreateTransactionForm({ accounts, onTransactionCreated }: Create
               step="0.01"
               min="0.01"
               placeholder="0.00"
-              value={formData.amount || ''}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('amount', parseFloat(e.target.value) || 0)}
+              value={formData.amount || ""}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                handleChange("amount", parseFloat(e.target.value) || 0)
+              }
               required
             />
           </div>
@@ -141,7 +156,12 @@ export function CreateTransactionForm({ accounts, onTransactionCreated }: Create
             <select
               id="type"
               value={formData.transaction_type}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleChange('transaction_type', e.target.value as 'debit' | 'credit')}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                handleChange(
+                  "transaction_type",
+                  e.target.value as "debit" | "credit",
+                )
+              }
               className="w-full p-2 border border-input rounded-md bg-background"
             >
               <option value="debit">Debit (Money Out)</option>
@@ -150,10 +170,10 @@ export function CreateTransactionForm({ accounts, onTransactionCreated }: Create
           </div>
 
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? 'Creating...' : 'Create Transaction'}
+            {loading ? "Creating..." : "Create Transaction"}
           </Button>
         </form>
       </CardContent>
     </Card>
-  )
+  );
 }
