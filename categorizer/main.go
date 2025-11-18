@@ -1,11 +1,12 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type TransactionRequest struct {
@@ -102,18 +103,25 @@ func categorizeTransaction(merchant, description string, amount float64, transac
 }
 
 func handleCategorize(c *gin.Context) {
+	start := time.Now()
+
 	var req TransactionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("Bad request: %v", err)
+		recordCategorizationError("bad_request")
+		logCategorizationError("bad_request", err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	log.Printf("Categorizing transaction - Merchant: %s, Amount: %.2f, Credit: %t", req.Merchant, req.Amount, req.TransactionType)
-
 	category := categorizeTransaction(req.Merchant, req.Description, req.Amount, req.TransactionType)
+	duration := time.Since(start)
 
-	log.Printf("Categorized as: %s", category)
+	// Record metrics
+	recordCategorizationRequest(category, "success")
+	recordCategorizationDuration(category, duration)
+
+	// Log categorization request
+	logCategorizationRequest(req.Merchant, category, req.Amount, duration, true)
 
 	response := CategoryResponse{
 		Category: category,
@@ -122,16 +130,25 @@ func handleCategorize(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+
 func main() {
-	log.Println("Starting categorizer service...")
+	// Log service startup
+	logServiceStartup("9000")
 
 	r := gin.Default()
+
+	// Add metrics middleware
+	r.Use(MetricsMiddleware())
+
+	// Prometheus metrics endpoint
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "healthy",
 			"service": "categorizer",
+			"version": "1.0.0",
 		})
 	})
 
@@ -139,6 +156,9 @@ func main() {
 	r.POST("/categorize", handleCategorize)
 
 	// Start server
-	log.Println("Server listening on port 9000")
+	structuredLogger.Info("Server started and listening", map[string]interface{}{
+		"port":       "9000",
+		"event_type": "server_ready",
+	})
 	r.Run(":9000")
 }
