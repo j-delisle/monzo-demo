@@ -93,8 +93,8 @@ interface AccountCardsGridProps {
   accounts: Account[];
   selectedAccount: Account | null;
   onAccountSelect: (account: Account) => void;
-  onTriggerTopUp: (accountId: string) => void;
-  triggeringTopUp: string | null;
+  onTriggerTopUp: (accountId: number) => void;
+  triggeringTopUp: number | null;
 }
 
 export function AccountCardsGrid({
@@ -135,7 +135,7 @@ export function AccountCardsGrid({
             </div>
             <div className="flex items-center justify-between">
               <CardDescription>
-                Account ID: {account.id.slice(-8)}
+                Account ID: {account.uuid.slice(-8)}
               </CardDescription>
               <button
                 onClick={(e) => {
@@ -177,7 +177,7 @@ export function AccountCardsDisplay({ accounts }: AccountCardsDisplayProps) {
               {formatCurrency(account.balance)}
             </div>
             <CardDescription>
-              Account ID: {account.id.slice(-8)}
+              Account ID: {account.uuid.slice(-8)}
             </CardDescription>
           </CardContent>
         </Card>

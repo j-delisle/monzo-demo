@@ -17,7 +17,7 @@ export function Dashboard() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [currentView, setCurrentView] = useState("overview");
   const [loading, setLoading] = useState(true);
-  const [triggeringTopUp, setTriggeringTopUp] = useState<string | null>(null);
+  const [triggeringTopUp, setTriggeringTopUp] = useState<number | null>(null);
 
   const fetchAccounts = async () => {
     try {
@@ -63,7 +63,7 @@ export function Dashboard() {
     setSelectedAccount(account);
   };
 
-  const handleTriggerTopUp = async (accountId: string) => {
+  const handleTriggerTopUp = async (accountId: number) => {
     setTriggeringTopUp(accountId);
     try {
       await topUpApi.triggerTopUp(accountId);

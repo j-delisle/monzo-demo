@@ -24,14 +24,14 @@ export const accountsApi = {
     return response.data
   },
   
-  getAccount: async (accountId: string): Promise<Account> => {
+  getAccount: async (accountId: number): Promise<Account> => {
     const response = await api.get(`/accounts/${accountId}`)
     return response.data
   },
 }
 
 export const transactionsApi = {
-  getTransactions: async (accountId?: string): Promise<Transaction[]> => {
+  getTransactions: async (accountId?: number): Promise<Transaction[]> => {
     const response = await api.get('/transactions', {
       params: accountId ? { account_id: accountId } : {}
     })
@@ -45,7 +45,7 @@ export const transactionsApi = {
 }
 
 export const topUpApi = {
-  getTopUpRules: async (accountId?: string): Promise<TopUpRule[]> => {
+  getTopUpRules: async (accountId?: number): Promise<TopUpRule[]> => {
     const response = await api.get('/topup-rules', {
       params: accountId ? { account_id: accountId } : {}
     })
@@ -57,14 +57,14 @@ export const topUpApi = {
     return response.data
   },
   
-  getTopUpEvents: async (accountId?: string): Promise<TopUpEvent[]> => {
+  getTopUpEvents: async (accountId?: number): Promise<TopUpEvent[]> => {
     const response = await api.get('/topup-events', {
       params: accountId ? { account_id: accountId } : {}
     })
     return response.data
   },
   
-  triggerTopUp: async (accountId: string): Promise<{ triggered: boolean; message: string }> => {
+  triggerTopUp: async (accountId: number): Promise<{ triggered: boolean; message: string }> => {
     const response = await api.post('/trigger-topup', null, {
       params: { account_id: accountId }
     })

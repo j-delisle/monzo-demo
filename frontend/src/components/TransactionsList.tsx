@@ -6,7 +6,7 @@ import { transactionsApi } from '@/services/api'
 import { ArrowUpDown, TrendingDown, TrendingUp } from 'lucide-react'
 
 interface TransactionsListProps {
-  accountId?: string
+  accountId?: number
   refreshTrigger?: number
 }
 

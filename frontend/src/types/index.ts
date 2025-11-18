@@ -1,8 +1,9 @@
 export interface Account {
-  id: string
+  id: number
+  uuid: string
   name: string
   balance: number
-  user_id: string
+  user_id: number
 }
 
 export interface Transaction {
@@ -17,7 +18,7 @@ export interface Transaction {
 }
 
 export interface CreateTransaction {
-  account_id: string
+  account_id: number
   amount: number
   merchant: string
   description: string
@@ -34,7 +35,7 @@ export interface TopUpRule {
 }
 
 export interface CreateTopUpRule {
-  account_id: string
+  account_id: number
   threshold: number
   topup_amount: number
 }

@@ -15,7 +15,7 @@ interface AccountsListProps {
 export function AccountsList({ onAccountSelect, selectedAccount, refreshTrigger }: AccountsListProps) {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
-  const [triggeringTopUp, setTriggeringTopUp] = useState<string | null>(null)
+  const [triggeringTopUp, setTriggeringTopUp] = useState<number | null>(null)
 
   const fetchAccounts = async () => {
     try {
@@ -28,7 +28,7 @@ export function AccountsList({ onAccountSelect, selectedAccount, refreshTrigger 
     }
   }
 
-  const handleTriggerTopUp = async (accountId: string) => {
+  const handleTriggerTopUp = async (accountId: number) => {
     setTriggeringTopUp(accountId)
     try {
       const result = await topUpApi.triggerTopUp(accountId)

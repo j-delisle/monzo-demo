@@ -21,7 +21,7 @@ export function TopUpRulesManager({ accounts }: TopUpRulesManagerProps) {
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState<CreateTopUpRule>({
-    account_id: selectedAccount?.id || "",
+    account_id: selectedAccount?.id || 0,
     threshold: 0,
     topup_amount: 0,
   });

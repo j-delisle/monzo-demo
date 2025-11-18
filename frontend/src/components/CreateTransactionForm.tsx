@@ -15,7 +15,7 @@ interface CreateTransactionFormProps {
 
 export function CreateTransactionForm({ accounts, onTransactionCreated }: CreateTransactionFormProps) {
   const [formData, setFormData] = useState<CreateTransaction>({
-    account_id: accounts[0]?.id || '',
+    account_id: accounts[0]?.id || 0,
     amount: 0,
     merchant: '',
     description: '',
@@ -38,7 +38,7 @@ export function CreateTransactionForm({ accounts, onTransactionCreated }: Create
     try {
       await transactionsApi.createTransaction(formData)
       setFormData({
-        account_id: accounts[0]?.id || '',
+        account_id: accounts[0]?.id || 0,
         amount: 0,
         merchant: '',
         description: '',

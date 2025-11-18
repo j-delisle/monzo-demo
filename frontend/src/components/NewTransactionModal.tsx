@@ -32,7 +32,7 @@ export function NewTransactionModal({
   onTransactionCreated,
 }: NewTransactionModalProps) {
   const [formData, setFormData] = useState<CreateTransaction>({
-    account_id: "",
+    account_id: 0,
     amount: 0,
     description: "",
     merchant: "",
@@ -49,7 +49,7 @@ export function NewTransactionModal({
     try {
       await transactionsApi.createTransaction(formData);
       setFormData({
-        account_id: "",
+        account_id: 0,
         amount: 0,
         description: "",
         merchant: "",
@@ -66,7 +66,7 @@ export function NewTransactionModal({
 
   const handleClose = () => {
     setFormData({
-      account_id: "",
+      account_id: 0,
       amount: 0,
       description: "",
       merchant: "",
@@ -85,9 +85,9 @@ export function NewTransactionModal({
           <div className="space-y-2">
             <Label htmlFor="account">Account</Label>
             <Select
-              value={formData.account_id}
+              value={formData.account_id.toString()}
               onValueChange={(value) =>
-                setFormData((prev) => ({ ...prev, account_id: value }))
+                setFormData((prev) => ({ ...prev, account_id: parseInt(value) }))
               }
             >
               <SelectTrigger>
@@ -95,7 +95,7 @@ export function NewTransactionModal({
               </SelectTrigger>
               <SelectContent className="z-50 bg-white border border-gray-200">
                 {accounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
+                  <SelectItem key={account.id} value={account.id.toString()}>
                     {account.name}
                   </SelectItem>
                 ))}
