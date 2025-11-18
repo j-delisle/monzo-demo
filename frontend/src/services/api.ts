@@ -18,6 +18,8 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+export { api }
+
 export const accountsApi = {
   getAccounts: async (): Promise<Account[]> => {
     const response = await api.get('/accounts')

@@ -9,6 +9,7 @@ import {
 } from "@/components/AccountOverviewCards";
 import { TransactionsTable } from "@/components/TransactionsTable";
 import { TopUpRulesManager } from "@/components/TopUpRulesManager";
+import { ObservabilityPage } from "@/components/ObservabilityPage";
 
 export function Dashboard() {
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
@@ -140,6 +141,9 @@ export function Dashboard() {
             <TopUpRulesManager accounts={accounts} />
           </div>
         );
+
+      case "observability":
+        return <ObservabilityPage />;
 
       default:
         return null;

@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   TrendingUp,
+  Activity,
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -30,6 +31,7 @@ export function DashboardLayout({
     { name: "Accounts", icon: CreditCard, value: "accounts" },
     { name: "Transactions", icon: ArrowUpDown, value: "transactions" },
     { name: "Top Up Rules", icon: TrendingUp, value: "topup" },
+    { name: "Observability", icon: Activity, value: "observability" },
   ];
 
   return (
