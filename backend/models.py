@@ -2,20 +2,27 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
+import uuid
 
 class Account(BaseModel):
-    id: str
+    id: int
+    uuid: str  # UUID as string for JSON serialization
     name: str
     balance: float
-    user_id: str
+    user_id: int
+
+class CreateAccount(BaseModel):
+    name: str
+    balance: float
+    user_id: int
 
 class TransactionType(str, Enum):
     DEBIT = "debit"
     CREDIT = "credit"
 
 class Transaction(BaseModel):
-    id: str
-    account_id: str
+    id: int
+    account_id: int
     amount: float
     merchant: str
     description: str
@@ -24,27 +31,27 @@ class Transaction(BaseModel):
     timestamp: datetime
 
 class CreateTransaction(BaseModel):
-    account_id: str
+    account_id: int
     amount: float
     merchant: str
     description: str
     transaction_type: TransactionType
 
 class TopUpRule(BaseModel):
-    id: str
-    account_id: str
+    id: int
+    account_id: int
     threshold: float
     topup_amount: float
     enabled: bool = True
 
 class CreateTopUpRule(BaseModel):
-    account_id: str
+    account_id: int
     threshold: float
     topup_amount: float
 
 class TopUpEvent(BaseModel):
-    id: str
-    account_id: str
+    id: int
+    account_id: int
     amount: float
     triggered_balance: float
     timestamp: datetime
@@ -59,7 +66,7 @@ class CategorizationResponse(BaseModel):
 
 # Auth Models
 class User(BaseModel):
-    id: str
+    id: int
     email: str
     name: str
     created_at: datetime

@@ -1,6 +1,7 @@
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
-from models import UserCreate, UserLogin, Token, User
+from models import UserCreate, UserLogin, Token, User as UserResponse, CreateAccount
+from database.models import User, Account
 from auth.auth import (
     authenticate_user,
     create_access_token,
@@ -9,7 +10,6 @@ from auth.auth import (
     get_current_user
 )
 from database.repository import db
-import uuid
 from datetime import datetime
 import logging
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
-@router.post("/signup", response_model=User)
+@router.post("/signup", response_model=UserResponse)
 async def signup(user_data: UserCreate):
     # Check if user already exists
     if db.get_user_by_email(user_data.email):
@@ -26,30 +26,25 @@ async def signup(user_data: UserCreate):
             detail="Email already registered"
         )
 
-    # Create new user
+    # Create new user (ID will be auto-generated)
     hashed_password = get_password_hash(user_data.password)
     new_user = User(
-        id=str(uuid.uuid4()),
         email=user_data.email,
         name=user_data.name,
         created_at=datetime.now()
     )
 
-    db.create_user(new_user)
+    new_user = db.create_user(new_user)  # Get user with generated ID
     db.set_user_password_hash(user_data.email, hashed_password)
 
     # Create default accounts for new user
-    from models import Account
-
     default_accounts = [
-        Account(
-            id=str(uuid.uuid4()),
+        CreateAccount(
             name="Current Account",
             balance=100.0,
             user_id=new_user.id
         ),
-        Account(
-            id=str(uuid.uuid4()),
+        CreateAccount(
             name="Savings Account",
             balance=500.0,
             user_id=new_user.id
@@ -113,6 +108,6 @@ async def demo_login():
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.get("/me", response_model=User)
+@router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return current_user

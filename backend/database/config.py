@@ -1,15 +1,24 @@
 import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import QueuePool
 from database.models import Base
 
-# Database configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/monzo_demo.db")
+# Load environment variables from .env file
+load_dotenv()
 
-# Create engine
+# Database configuration
+DATABASE_URL = os.getenv("DATABASE_URL", None)
+
+# Create engine with PostgreSQL optimizations
 engine = create_engine(
-    DATABASE_URL, 
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
+    DATABASE_URL,
+    poolclass=QueuePool,
+    pool_size=10,
+    max_overflow=20,
+    pool_pre_ping=True,  # Verify connections before use
+    pool_recycle=3600,   # Recycle connections every hour
     echo=False  # Set to True for SQL query logging
 )
 
@@ -26,6 +35,4 @@ def get_database():
 
 def create_tables():
     """Create all tables"""
-    # Ensure data directory exists
-    os.makedirs("./data", exist_ok=True)
     Base.metadata.create_all(bind=engine)

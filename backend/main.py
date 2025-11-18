@@ -1,12 +1,20 @@
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from models import *
+from models import (
+    CreateTransaction, Transaction as TransactionResponse,
+    CreateTopUpRule, TopUpRule as TopUpRuleResponse,
+    TopUpEvent as TopUpEventResponse,
+    Account as AccountResponse,
+    User as UserResponse,
+    CategorizationRequest, CategorizationResponse,
+    TransactionType
+)
+from database.models import User, Account, Transaction, TopUpRule, TopUpEvent
 from database.repository import db
 from database.init import init_database
 from auth.routes import router as auth_router
 from auth.auth import get_current_user
 import httpx
-import uuid
 from datetime import datetime
 from typing import List
 import logging
@@ -47,19 +55,19 @@ async def log_requests(request: Request, call_next):
 async def root():
     return {"message": "Monzo Demo API"}
 
-@app.get("/accounts", response_model=List[Account])
+@app.get("/accounts", response_model=List[AccountResponse])
 async def get_accounts(current_user: User = Depends(get_current_user)):
     return db.get_accounts_by_user(current_user.id)
 
-@app.get("/accounts/{account_id}", response_model=Account)
-async def get_account(account_id: str, current_user: User = Depends(get_current_user)):
+@app.get("/accounts/{account_id}", response_model=AccountResponse)
+async def get_account(account_id: int, current_user: User = Depends(get_current_user)):
     account = db.get_account_by_user(account_id, current_user.id)
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
     return account
 
-@app.get("/transactions", response_model=List[Transaction])
-async def get_transactions(account_id: str = None, current_user: User = Depends(get_current_user)):
+@app.get("/transactions", response_model=List[TransactionResponse])
+async def get_transactions(account_id: int = None, current_user: User = Depends(get_current_user)):
     if account_id:
         account = db.get_account_by_user(account_id, current_user.id)
         if not account:
@@ -69,7 +77,7 @@ async def get_transactions(account_id: str = None, current_user: User = Depends(
     all_transactions = db.get_transactions(account_id)
     return [t for t in all_transactions if t.account_id in user_account_ids]
 
-@app.post("/transactions", response_model=Transaction)
+@app.post("/transactions", response_model=TransactionResponse)
 async def create_transaction(transaction_data: CreateTransaction, current_user: User = Depends(get_current_user)):
     logger.info(f"Creating transaction: {transaction_data}")
     account = db.get_account_by_user(transaction_data.account_id, current_user.id)
@@ -99,9 +107,7 @@ async def create_transaction(transaction_data: CreateTransaction, current_user: 
     except Exception as e:
         print(f"Failed to categorize transaction: {e}")
 
-    # Create transaction
     transaction = Transaction(
-        id=str(uuid.uuid4()),
         account_id=transaction_data.account_id,
         amount=transaction_data.amount,
         merchant=transaction_data.merchant,
@@ -127,8 +133,8 @@ async def create_transaction(transaction_data: CreateTransaction, current_user: 
     logger.info(f"Transaction created successfully: {transaction}")
     return transaction
 
-@app.get("/topup-rules", response_model=List[TopUpRule])
-async def get_topup_rules(account_id: str = None, current_user: User = Depends(get_current_user)):
+@app.get("/topup-rules", response_model=List[TopUpRuleResponse])
+async def get_topup_rules(account_id: int = None, current_user: User = Depends(get_current_user)):
     if account_id:
         account = db.get_account_by_user(account_id, current_user.id)
         if not account:
@@ -138,14 +144,13 @@ async def get_topup_rules(account_id: str = None, current_user: User = Depends(g
     all_rules = db.get_topup_rules(account_id)
     return [r for r in all_rules if r.account_id in user_account_ids]
 
-@app.post("/topup-rules", response_model=TopUpRule)
+@app.post("/topup-rules", response_model=TopUpRuleResponse)
 async def create_topup_rule(rule_data: CreateTopUpRule, current_user: User = Depends(get_current_user)):
     account = db.get_account_by_user(rule_data.account_id, current_user.id)
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 
     rule = TopUpRule(
-        id=str(uuid.uuid4()),
         account_id=rule_data.account_id,
         threshold=rule_data.threshold,
         topup_amount=rule_data.topup_amount,
@@ -154,8 +159,8 @@ async def create_topup_rule(rule_data: CreateTopUpRule, current_user: User = Dep
 
     return db.add_topup_rule(rule)
 
-@app.get("/topup-events", response_model=List[TopUpEvent])
-async def get_topup_events(account_id: str = None, current_user: User = Depends(get_current_user)):
+@app.get("/topup-events", response_model=List[TopUpEventResponse])
+async def get_topup_events(account_id: int = None, current_user: User = Depends(get_current_user)):
     if account_id:
         account = db.get_account_by_user(account_id, current_user.id)
         if not account:
@@ -166,7 +171,7 @@ async def get_topup_events(account_id: str = None, current_user: User = Depends(
     return [e for e in all_events if e.account_id in user_account_ids]
 
 @app.post("/trigger-topup")
-async def manual_trigger_topup(account_id: str, current_user: User = Depends(get_current_user)):
+async def manual_trigger_topup(account_id: int, current_user: User = Depends(get_current_user)):
     account = db.get_account_by_user(account_id, current_user.id)
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
@@ -174,7 +179,7 @@ async def manual_trigger_topup(account_id: str, current_user: User = Depends(get
     result = await check_and_trigger_topup(account_id)
     return {"triggered": result["triggered"], "message": result["message"]}
 
-async def check_and_trigger_topup(account_id: str):
+async def check_and_trigger_topup(account_id: int):
     account = db.get_account(account_id)
     if not account:
         return {"triggered": False, "message": "Account not found"}
@@ -190,7 +195,6 @@ async def check_and_trigger_topup(account_id: str):
 
             # Log topup event
             event = TopUpEvent(
-                id=str(uuid.uuid4()),
                 account_id=account_id,
                 amount=rule.topup_amount,
                 triggered_balance=account.balance,

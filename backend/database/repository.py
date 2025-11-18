@@ -2,7 +2,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from database.config import get_database
 from database.models import User as DBUser, Account as DBAccount, Transaction as DBTransaction, TopUpRule as DBTopUpRule, TopUpEvent as DBTopUpEvent
-from models import User, Account, Transaction, TopUpRule, TopUpEvent
+from models import User, Account, CreateAccount, Transaction, CreateTransaction, TopUpRule, TopUpEvent
 
 class SQLiteRepository:
     def __init__(self):
@@ -47,7 +47,6 @@ class SQLiteRepository:
         db = self._get_db()
         try:
             db_user = DBUser(
-                id=user.id,
                 email=user.email,
                 name=user.name,
                 password_hash="",  # Will be set separately
@@ -55,6 +54,10 @@ class SQLiteRepository:
             )
             db.add(db_user)
             db.commit()
+            db.refresh(db_user)  # Get the auto-generated ID
+            
+            # Return user with the generated ID
+            user.id = db_user.id
             return user
         finally:
             db.close()
@@ -84,6 +87,7 @@ class SQLiteRepository:
             db_accounts = db.query(DBAccount).all()
             return [Account(
                 id=acc.id,
+                uuid=str(acc.uuid),
                 name=acc.name,
                 balance=acc.balance,
                 user_id=acc.user_id
@@ -97,6 +101,7 @@ class SQLiteRepository:
             db_accounts = db.query(DBAccount).filter(DBAccount.user_id == user_id).all()
             return [Account(
                 id=acc.id,
+                uuid=str(acc.uuid),
                 name=acc.name,
                 balance=acc.balance,
                 user_id=acc.user_id
@@ -111,6 +116,42 @@ class SQLiteRepository:
             if db_account:
                 return Account(
                     id=db_account.id,
+                    uuid=str(db_account.uuid),
+                    name=db_account.name,
+                    balance=db_account.balance,
+                    user_id=db_account.user_id
+                )
+            return None
+        finally:
+            db.close()
+
+    def get_account_by_uuid(self, account_uuid: str) -> Optional[Account]:
+        db = self._get_db()
+        try:
+            db_account = db.query(DBAccount).filter(DBAccount.uuid == account_uuid).first()
+            if db_account:
+                return Account(
+                    id=db_account.id,
+                    uuid=str(db_account.uuid),
+                    name=db_account.name,
+                    balance=db_account.balance,
+                    user_id=db_account.user_id
+                )
+            return None
+        finally:
+            db.close()
+
+    def get_account_by_uuid_and_user(self, account_uuid: str, user_id: str) -> Optional[Account]:
+        db = self._get_db()
+        try:
+            db_account = db.query(DBAccount).filter(
+                DBAccount.uuid == account_uuid,
+                DBAccount.user_id == user_id
+            ).first()
+            if db_account:
+                return Account(
+                    id=db_account.id,
+                    uuid=str(db_account.uuid),
                     name=db_account.name,
                     balance=db_account.balance,
                     user_id=db_account.user_id
@@ -129,6 +170,7 @@ class SQLiteRepository:
             if db_account:
                 return Account(
                     id=db_account.id,
+                    uuid=str(db_account.uuid),
                     name=db_account.name,
                     balance=db_account.balance,
                     user_id=db_account.user_id
@@ -137,18 +179,26 @@ class SQLiteRepository:
         finally:
             db.close()
 
-    def add_account(self, account: Account) -> Account:
+    def add_account(self, account: CreateAccount) -> Account:
         db = self._get_db()
         try:
             db_account = DBAccount(
-                id=account.id,
                 name=account.name,
                 balance=account.balance,
                 user_id=account.user_id
             )
             db.add(db_account)
             db.commit()
-            return account
+            db.refresh(db_account)  # Get the auto-generated ID
+            
+            # Return account with the generated ID and UUID
+            return Account(
+                id=db_account.id,
+                uuid=str(db_account.uuid),
+                name=account.name,
+                balance=account.balance,
+                user_id=account.user_id
+            )
         finally:
             db.close()
     
@@ -188,7 +238,6 @@ class SQLiteRepository:
         db = self._get_db()
         try:
             db_transaction = DBTransaction(
-                id=transaction.id,
                 account_id=transaction.account_id,
                 amount=transaction.amount,
                 merchant=transaction.merchant,
@@ -199,6 +248,10 @@ class SQLiteRepository:
             )
             db.add(db_transaction)
             db.commit()
+            db.refresh(db_transaction)  # Get the auto-generated ID
+            
+            # Return transaction with the generated ID
+            transaction.id = db_transaction.id
             return transaction
         finally:
             db.close()
@@ -226,7 +279,6 @@ class SQLiteRepository:
         db = self._get_db()
         try:
             db_rule = DBTopUpRule(
-                id=rule.id,
                 account_id=rule.account_id,
                 threshold=rule.threshold,
                 topup_amount=rule.topup_amount,
@@ -234,6 +286,10 @@ class SQLiteRepository:
             )
             db.add(db_rule)
             db.commit()
+            db.refresh(db_rule)  # Get the auto-generated ID
+            
+            # Return rule with the generated ID
+            rule.id = db_rule.id
             return rule
         finally:
             db.close()
@@ -261,7 +317,6 @@ class SQLiteRepository:
         db = self._get_db()
         try:
             db_event = DBTopUpEvent(
-                id=event.id,
                 account_id=event.account_id,
                 amount=event.amount,
                 triggered_balance=event.triggered_balance,
@@ -269,6 +324,10 @@ class SQLiteRepository:
             )
             db.add(db_event)
             db.commit()
+            db.refresh(db_event)  # Get the auto-generated ID
+            
+            # Return event with the generated ID
+            event.id = db_event.id
             return event
         finally:
             db.close()
