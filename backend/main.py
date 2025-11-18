@@ -155,12 +155,14 @@ async def get_timeseries_data():
         transactions = db.get_all_transactions()
 
         # Get recent transaction timestamps for realistic distribution
+        from datetime import timezone
+        now = datetime.now(timezone.utc)
         recent_transactions = [t for t in transactions
-                             if (datetime.now() - t.timestamp).days < 1]
+                             if (now - t.timestamp).days < 1]
 
         # Generate realistic hourly data based on actual transaction patterns
         time_series = []
-        current_hour = datetime.now().hour
+        current_hour = now.hour
 
         for i in range(24):
             hour_index = (current_hour - 23 + i) % 24
@@ -192,18 +194,23 @@ async def get_timeseries_data():
                 categorizer_requests = transactions_count
                 errors = 1 if transactions_count > 10 and (i % 7) == 0 else 0
 
-            # Real-ish response time simulation (based on load)
-            if transactions_count > 10:
-                response_time = 120 + (transactions_count * 2)  # Higher load = slower
-            else:
-                response_time = 50 + (transactions_count * 5)
+            # Get real response time from Prometheus metrics
+            backend_metrics = get_metrics()
+            backend_lines = backend_metrics.strip().split('\n')
+            backend_lines = [line for line in backend_lines if not line.startswith('#') and line.strip()]
+            avg_response_time_seconds = extract_histogram_average(backend_lines, "api_request_duration_seconds")
+            base_response_time_ms = avg_response_time_seconds * 1000 if avg_response_time_seconds > 0 else 80
+
+            # Use real response time as base, vary slightly by load
+            response_time = base_response_time_ms * (1 + (transactions_count * 0.02))
 
             time_series.append({
                 "hour": f"{hour:02d}:00",
                 "transactions": transactions_count,
                 "categorizer_requests": categorizer_requests,
+                "api_requests": int((transactions_count + categorizer_requests) * 1.2),  # API calls > transactions
                 "errors": errors,
-                "response_time": min(response_time, 500)  # Cap at 500ms
+                "response_time": min(max(response_time, 20), 1000)  # Reasonable bounds
             })
 
         return {
@@ -217,6 +224,27 @@ async def get_timeseries_data():
     except Exception as e:
         logger.error(f"Failed to get timeseries data: {str(e)}")
         return {"error": "Failed to retrieve timeseries data"}
+
+def extract_histogram_average(lines: List[str], metric_name: str) -> float:
+    """Extract average from Prometheus histogram sum/count"""
+    sum_value = 0.0
+    count_value = 0.0
+
+    for line in lines:
+        if line.startswith(f"{metric_name}_sum"):
+            try:
+                sum_value += float(line.split()[-1])
+            except (IndexError, ValueError):
+                continue
+        elif line.startswith(f"{metric_name}_count"):
+            try:
+                count_value += float(line.split()[-1])
+            except (IndexError, ValueError):
+                continue
+
+    if count_value > 0:
+        return sum_value / count_value
+    return 0.0
 
 def parse_prometheus_metrics(backend_metrics: str, categorizer_metrics: str) -> dict:
     """Parse Prometheus format metrics and return structured JSON"""
@@ -259,6 +287,10 @@ def parse_prometheus_metrics(backend_metrics: str, categorizer_metrics: str) -> 
     backend_lines = backend_metrics.strip().split('\n')
     backend_lines = [line for line in backend_lines if not line.startswith('#') and line.strip()]
 
+    # Calculate real average response time from Prometheus histogram
+    avg_response_time_seconds = extract_histogram_average(backend_lines, "api_request_duration_seconds")
+    avg_response_time_ms = avg_response_time_seconds * 1000  # Convert to milliseconds
+
     metrics["backend"] = {
         "transactions_total": extract_counter_by_label(backend_lines, "transactions_total"),
         "topups_triggered_total": extract_metric_value(backend_lines, "topups_triggered_total"),
@@ -266,7 +298,8 @@ def parse_prometheus_metrics(backend_metrics: str, categorizer_metrics: str) -> 
         "categorizer_requests_success": extract_counter_by_label(backend_lines, "categorizer_requests_total", {"status": "success"}),
         "categorizer_requests_failure": extract_counter_by_label(backend_lines, "categorizer_requests_total", {"status": "failure"}),
         "accounts_count": extract_metric_value(backend_lines, "accounts_total"),
-        "total_balance": extract_metric_value(backend_lines, "account_balance_total")
+        "total_balance": extract_metric_value(backend_lines, "account_balance_total"),
+        "avg_response_time_ms": avg_response_time_ms
     }
 
     # Parse categorizer metrics
@@ -295,6 +328,8 @@ def parse_prometheus_metrics(backend_metrics: str, categorizer_metrics: str) -> 
         "total_transactions": actual_transaction_count,
         "total_accounts": metrics["backend"]["accounts_count"],
         "total_balance": metrics["backend"]["total_balance"],
+        "total_requests": metrics["backend"]["api_requests_total"],
+        "avg_response_time_ms": metrics["backend"]["avg_response_time_ms"],
         "categorizer_success_rate": ((total_categorizer_requests - total_categorizer_errors) / max(total_categorizer_requests, 1)) * 100,
         "categorizer_error_rate": total_categorizer_errors,
         "system_health": "healthy" if total_categorizer_errors < 10 else "degraded"
@@ -316,12 +351,19 @@ async def track_requests(request: Request, call_next):
     duration = time.time() - start_time
     duration_ms = duration * 1000
 
-    # Record metrics
+    # Record metrics including duration
     record_api_request(
         method=request.method,
         endpoint=request.url.path,
         status_code=response.status_code
     )
+
+    # Record the duration we already calculated
+    from metrics import api_request_duration_seconds
+    api_request_duration_seconds.labels(
+        method=request.method,
+        endpoint=request.url.path
+    ).observe(duration)
 
     # Log request
     user_id = getattr(request.state, 'user_id', None)

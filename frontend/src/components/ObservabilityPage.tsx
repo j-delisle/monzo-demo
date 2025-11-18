@@ -17,13 +17,25 @@ const chartConfig = {
     label: 'API Requests',
     color: 'hsl(var(--chart-2))',
   },
+  api_requests: {
+    label: 'API Requests',
+    color: 'hsl(var(--chart-2))',
+  },
   categorizer: {
     label: 'Categorizer',
+    color: 'hsl(var(--chart-3))',
+  },
+  categorizer_requests: {
+    label: 'Categorizer Requests',
     color: 'hsl(var(--chart-3))',
   },
   errors: {
     label: 'Errors',
     color: 'hsl(var(--chart-4))',
+  },
+  response_time: {
+    label: 'Response Time (ms)',
+    color: 'hsl(var(--chart-1))',
   },
 } satisfies ChartConfig;
 
@@ -105,7 +117,7 @@ export function ObservabilityPage() {
   if (!metrics) return null;
 
   const systemHealth = metrics?.summary?.system_health || 'degraded';
-  const avgResponseTime = MetricsApiService.calculateAverageResponseTime(timeSeriesData);
+  const avgResponseTime = metrics?.summary?.avg_response_time_ms || MetricsApiService.calculateAverageResponseTime(timeSeriesData);
   const successRate = metrics?.summary?.categorizer_success_rate || 0;
 
   return (
@@ -178,7 +190,7 @@ export function ObservabilityPage() {
       </div>
 
       {/* Charts Grid */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         {/* Request Volume Over Time */}
         <Card>
           <CardHeader>
@@ -193,10 +205,10 @@ export function ObservabilityPage() {
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Area 
                   type="monotone" 
-                  dataKey="transactions" 
+                  dataKey="api_requests" 
                   stackId="1"
-                  stroke="var(--color-transactions)"
-                  fill="var(--color-transactions)"
+                  stroke="var(--color-requests)"
+                  fill="var(--color-requests)"
                   fillOpacity={0.6}
                 />
                 <Area 
@@ -227,7 +239,7 @@ export function ObservabilityPage() {
                 <Line 
                   type="monotone" 
                   dataKey="response_time" 
-                  stroke="var(--color-requests)"
+                  stroke="#8884d8"
                   strokeWidth={2}
                   dot={false}
                 />

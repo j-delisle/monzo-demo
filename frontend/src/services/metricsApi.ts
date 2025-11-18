@@ -10,6 +10,7 @@ export interface MetricsData {
     categorizer_requests_failure: number;
     accounts_count: number;
     total_balance: number;
+    avg_response_time_ms: number;
   };
   categorizer: {
     categorization_requests_total: number;
@@ -20,6 +21,8 @@ export interface MetricsData {
     total_transactions: number;
     total_accounts: number;
     total_balance: number;
+    total_requests: number;
+    avg_response_time_ms: number;
     categorizer_success_rate: number;
     categorizer_error_rate: number;
     system_health: 'healthy' | 'degraded';
@@ -30,6 +33,7 @@ export interface TimeSeriesDataPoint {
   hour: string;
   transactions: number;
   categorizer_requests: number;
+  api_requests: number;
   errors: number;
   response_time: number;
 }
