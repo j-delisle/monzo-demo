@@ -2,7 +2,7 @@ name: Deploy to Droplet
 
 on:
   push:
-    branches: ["main"] # deploy on push to main branch
+    branches: ["main"]
 
 jobs:
   deploy:
