@@ -167,3 +167,34 @@ def update_total_balance(balance: float):
 def update_active_connections(count: int):
     """Update active database connections"""
     database_connections_active.set(count)
+
+def seed_metrics_from_database():
+    """Initialize Prometheus metrics from existing database data on startup"""
+    try:
+        from database.repository import db
+        
+        # Get all existing transactions and recreate their metrics
+        transactions = db.get_all_transactions()
+        for transaction in transactions:
+            record_transaction(
+                transaction_type=transaction.transaction_type,
+                account_id=str(transaction.account_id),
+                category=transaction.category or "Other"
+            )
+        
+        # Get all existing topup events and recreate their metrics
+        topup_events = db.get_topup_events()
+        for event in topup_events:
+            record_topup(str(event.account_id))
+        
+        # Update current account and balance gauges
+        accounts = db.get_accounts()
+        update_accounts_count(len(accounts))
+        total_balance = sum(acc.balance for acc in accounts)
+        update_total_balance(total_balance)
+        
+        print(f"Seeded Prometheus metrics: {len(transactions)} transactions, {len(topup_events)} topups, {len(accounts)} accounts")
+        
+    except Exception as e:
+        print(f"Warning: Failed to seed metrics from database: {e}")
+        # Don't fail startup if seeding fails

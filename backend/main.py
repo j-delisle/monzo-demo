@@ -39,8 +39,11 @@ app = FastAPI(title="Monzo Demo API", version="1.0.0")
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database on startup"""
+    """Initialize database and seed metrics on startup"""
     init_database()
+    # Seed Prometheus metrics from existing database data
+    from metrics import seed_metrics_from_database
+    seed_metrics_from_database()
 
 app.add_middleware(
     CORSMiddleware,
@@ -67,29 +70,8 @@ async def metrics():
 async def api_metrics():
     """JSON metrics endpoint for frontend dashboard"""
     try:
-        # Update system-wide metrics
-        accounts = db.get_accounts()
-        update_accounts_count(len(accounts))
-        total_balance = sum(acc.balance for acc in accounts)
-        update_total_balance(total_balance)
-
-        # Get our own metrics
-        backend_metrics = get_metrics()
-
-        # Fetch Go categorizer metrics
-        categorizer_metrics = ""
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(f"{CATEGORIZER_URL}/metrics", timeout=5.0)
-                if response.status_code == 200:
-                    categorizer_metrics = response.text
-        except Exception as e:
-            logger.warning(f"Failed to fetch categorizer metrics: {str(e)}")
-
-        # Parse metrics and return JSON
-        parsed_metrics = parse_prometheus_metrics(backend_metrics, categorizer_metrics)
-        return parsed_metrics
-
+        from observability_service import observability
+        return await observability.get_metrics()
     except Exception as e:
         logger.error(f"Failed to get metrics: {str(e)}")
         return {"error": "Failed to retrieve metrics"}
@@ -97,50 +79,10 @@ async def api_metrics():
 # Categories breakdown endpoint
 @app.get("/api/metrics/categories")
 async def get_categories_breakdown():
-    """Get real transaction category breakdown"""
+    """Get transaction category breakdown from Prometheus metrics"""
     try:
-        transactions = db.get_all_transactions()
-
-        if not transactions:
-            return {"categories": []}
-
-        # Count transactions by category
-        category_counts = {}
-        total_transactions = len(transactions)
-
-        for transaction in transactions:
-            category = transaction.category or "Other"
-            category_counts[category] = category_counts.get(category, 0) + 1
-
-        # Convert to percentages and format for chart
-        categories = []
-        colors = {
-            'Food & Drink': '#ff6b6b',
-            'Transport': '#4ecdc4',
-            'Shopping': '#45b7d1',
-            'Groceries': '#96ceb4',
-            'Entertainment': '#ffeaa7',
-            'Bills & Utilities': '#dda0dd',
-            'Housing': '#fab1a0',
-            'Income': '#00b894',
-            'ATM': '#a29bfe',
-            'Other': '#6c5ce7'
-        }
-
-        for category, count in category_counts.items():
-            percentage = round((count / total_transactions) * 100, 1)
-            categories.append({
-                "name": category,
-                "value": percentage,
-                "count": count,
-                "color": colors.get(category, '#6c5ce7')  # Default to Other color
-            })
-
-        # Sort by percentage descending
-        categories.sort(key=lambda x: x['value'], reverse=True)
-
-        return {"categories": categories, "total_transactions": total_transactions}
-
+        from observability_service import observability
+        return await observability.get_category_breakdown()
     except Exception as e:
         logger.error(f"Failed to get category breakdown: {str(e)}")
         return {"error": "Failed to retrieve category data"}
@@ -148,194 +90,15 @@ async def get_categories_breakdown():
 # Time series endpoint
 @app.get("/api/metrics/timeseries")
 async def get_timeseries_data():
-    """Get time series data for charts - currently simulated from real metrics"""
+    """Get time series data from Prometheus metrics"""
     try:
-        # Get current real metrics
-        accounts = db.get_accounts()
-        transactions = db.get_all_transactions()
-
-        # Get recent transaction timestamps for realistic distribution
-        from datetime import timezone
-        now = datetime.now(timezone.utc)
-        recent_transactions = [t for t in transactions
-                             if (now - t.timestamp).days < 1]
-
-        # Generate realistic hourly data based on actual transaction patterns
-        time_series = []
-        current_hour = now.hour
-
-        for i in range(24):
-            hour_index = (current_hour - 23 + i) % 24
-            hour = hour_index if hour_index >= 0 else hour_index + 24
-
-            # Count actual transactions in this hour from recent data
-            hour_transactions = [t for t in recent_transactions
-                               if t.timestamp.hour == hour]
-
-            actual_count = len(hour_transactions)
-
-            # Use real data when available, simulate realistic patterns when not
-            if actual_count > 0:
-                transactions_count = actual_count
-                categorizer_requests = actual_count  # 1:1 ratio
-                errors = 0  # Assume success for real data
-            else:
-                # Simulate realistic patterns: higher during business hours
-                if 9 <= hour <= 17:  # Business hours
-                    base_transactions = 15
-                elif 18 <= hour <= 22:  # Evening
-                    base_transactions = 8
-                elif 6 <= hour <= 8:  # Morning
-                    base_transactions = 5
-                else:  # Night
-                    base_transactions = 1
-
-                transactions_count = max(0, base_transactions + (i % 3) - 1)
-                categorizer_requests = transactions_count
-                errors = 1 if transactions_count > 10 and (i % 7) == 0 else 0
-
-            # Get real response time from Prometheus metrics
-            backend_metrics = get_metrics()
-            backend_lines = backend_metrics.strip().split('\n')
-            backend_lines = [line for line in backend_lines if not line.startswith('#') and line.strip()]
-            avg_response_time_seconds = extract_histogram_average(backend_lines, "api_request_duration_seconds")
-            base_response_time_ms = avg_response_time_seconds * 1000 if avg_response_time_seconds > 0 else 80
-
-            # Use real response time as base, vary slightly by load
-            response_time = base_response_time_ms * (1 + (transactions_count * 0.02))
-
-            time_series.append({
-                "hour": f"{hour:02d}:00",
-                "transactions": transactions_count,
-                "categorizer_requests": categorizer_requests,
-                "api_requests": int((transactions_count + categorizer_requests) * 1.2),  # API calls > transactions
-                "errors": errors,
-                "response_time": min(max(response_time, 20), 1000)  # Reasonable bounds
-            })
-
-        return {
-            "timeseries": time_series,
-            "metadata": {
-                "total_transactions_today": len(recent_transactions),
-                "data_source": "real_data_with_simulation"
-            }
-        }
-
+        from observability_service import observability
+        return await observability.get_timeseries_data()
     except Exception as e:
         logger.error(f"Failed to get timeseries data: {str(e)}")
         return {"error": "Failed to retrieve timeseries data"}
 
-def extract_histogram_average(lines: List[str], metric_name: str) -> float:
-    """Extract average from Prometheus histogram sum/count"""
-    sum_value = 0.0
-    count_value = 0.0
 
-    for line in lines:
-        if line.startswith(f"{metric_name}_sum"):
-            try:
-                sum_value += float(line.split()[-1])
-            except (IndexError, ValueError):
-                continue
-        elif line.startswith(f"{metric_name}_count"):
-            try:
-                count_value += float(line.split()[-1])
-            except (IndexError, ValueError):
-                continue
-
-    if count_value > 0:
-        return sum_value / count_value
-    return 0.0
-
-def parse_prometheus_metrics(backend_metrics: str, categorizer_metrics: str) -> dict:
-    """Parse Prometheus format metrics and return structured JSON"""
-    metrics = {
-        "timestamp": datetime.now().isoformat(),
-        "backend": {},
-        "categorizer": {},
-        "summary": {}
-    }
-
-    # Helper function to extract metric value
-    def extract_metric_value(lines: List[str], metric_name: str) -> float:
-        for line in lines:
-            if line.startswith(metric_name) and not line.startswith(f"{metric_name}_"):
-                try:
-                    return float(line.split()[-1])
-                except (IndexError, ValueError):
-                    continue
-        return 0.0
-
-    def extract_counter_by_label(lines: List[str], metric_name: str, label_filters: dict = None) -> float:
-        total = 0.0
-        for line in lines:
-            if line.startswith(metric_name) and "{" in line:
-                if label_filters:
-                    # Check if all label filters match
-                    if all(f'{key}="{value}"' in line for key, value in label_filters.items()):
-                        try:
-                            total += float(line.split()[-1])
-                        except (IndexError, ValueError):
-                            continue
-                else:
-                    try:
-                        total += float(line.split()[-1])
-                    except (IndexError, ValueError):
-                        continue
-        return total
-
-    # Parse backend metrics
-    backend_lines = backend_metrics.strip().split('\n')
-    backend_lines = [line for line in backend_lines if not line.startswith('#') and line.strip()]
-
-    # Calculate real average response time from Prometheus histogram
-    avg_response_time_seconds = extract_histogram_average(backend_lines, "api_request_duration_seconds")
-    avg_response_time_ms = avg_response_time_seconds * 1000  # Convert to milliseconds
-
-    metrics["backend"] = {
-        "transactions_total": extract_counter_by_label(backend_lines, "transactions_total"),
-        "topups_triggered_total": extract_metric_value(backend_lines, "topups_triggered_total"),
-        "api_requests_total": extract_counter_by_label(backend_lines, "api_requests_total"),
-        "categorizer_requests_success": extract_counter_by_label(backend_lines, "categorizer_requests_total", {"status": "success"}),
-        "categorizer_requests_failure": extract_counter_by_label(backend_lines, "categorizer_requests_total", {"status": "failure"}),
-        "accounts_count": extract_metric_value(backend_lines, "accounts_total"),
-        "total_balance": extract_metric_value(backend_lines, "account_balance_total"),
-        "avg_response_time_ms": avg_response_time_ms
-    }
-
-    # Parse categorizer metrics
-    if categorizer_metrics:
-        categorizer_lines = categorizer_metrics.strip().split('\n')
-        categorizer_lines = [line for line in categorizer_lines if not line.startswith('#') and line.strip()]
-
-        metrics["categorizer"] = {
-            "categorization_requests_total": extract_counter_by_label(categorizer_lines, "categorization_requests_total"),
-            "categorization_errors_total": extract_counter_by_label(categorizer_lines, "categorization_errors_total"),
-            "http_requests_total": extract_counter_by_label(categorizer_lines, "http_requests_total"),
-        }
-
-    # Calculate summary metrics
-    total_categorizer_requests = metrics["categorizer"].get("categorization_requests_total", 0)
-    total_categorizer_errors = metrics["categorizer"].get("categorization_errors_total", 0)
-
-    # Get total transaction count from database for accuracy
-    try:
-        all_transactions = db.get_all_transactions()
-        actual_transaction_count = len(all_transactions)
-    except:
-        actual_transaction_count = metrics["backend"]["transactions_total"]
-
-    metrics["summary"] = {
-        "total_transactions": actual_transaction_count,
-        "total_accounts": metrics["backend"]["accounts_count"],
-        "total_balance": metrics["backend"]["total_balance"],
-        "total_requests": metrics["backend"]["api_requests_total"],
-        "avg_response_time_ms": metrics["backend"]["avg_response_time_ms"],
-        "categorizer_success_rate": ((total_categorizer_requests - total_categorizer_errors) / max(total_categorizer_requests, 1)) * 100,
-        "categorizer_error_rate": total_categorizer_errors,
-        "system_health": "healthy" if total_categorizer_errors < 10 else "degraded"
-    }
-
-    return metrics
 
 # Request tracking middleware
 @app.middleware("http")
