@@ -111,14 +111,14 @@ export function AccountCardsGrid({
           key={account.id}
           className={`cursor-pointer transition-all hover:shadow-md ${
             selectedAccount?.id === account.id
-              ? "ring-2 ring-blue-500 shadow-md"
+              ? "ring-2 ring-[#ec5d4b] shadow-md"
               : ""
           }`}
           onClick={() => onAccountSelect(account)}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="flex items-center space-x-2">
-              <Wallet className="h-5 w-5 text-blue-600" />
+              <Wallet className="h-5 w-5 text-[#ec5d4b]" />
               <CardTitle className="text-base font-medium">
                 {account.name}
               </CardTitle>
@@ -143,7 +143,7 @@ export function AccountCardsGrid({
                   onTriggerTopUp(account.id);
                 }}
                 disabled={triggeringTopUp === account.id}
-                className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors disabled:opacity-50"
+                className="text-xs bg-[#ec5d4b]/10 text-[#ec5d4b] px-2 py-1 rounded hover:bg-[#ec5d4b]/20 transition-colors disabled:opacity-50"
               >
                 {triggeringTopUp === account.id ? "TopUp..." : "TopUp"}
               </button>
@@ -166,7 +166,7 @@ export function AccountCardsDisplay({ accounts }: AccountCardsDisplayProps) {
         <Card key={account.id} className="transition-all hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="flex items-center space-x-2">
-              <Wallet className="h-5 w-5 text-blue-600" />
+              <Wallet className="h-5 w-5 text-[#ec5d4b]" />
               <CardTitle className="text-base font-medium">
                 {account.name}
               </CardTitle>

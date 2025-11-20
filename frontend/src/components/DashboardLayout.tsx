@@ -86,7 +86,7 @@ export function DashboardLayout({
                   group flex items-center px-3 py-2 text-sm font-medium rounded-md w-full text-left
                   ${
                     currentView === item.value
-                      ? "bg-blue-100 text-blue-700"
+                      ? "bg-[#ec5d4b]/10 text-[#ec5d4b]"
                       : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                   }
                 `}
@@ -102,7 +102,7 @@ export function DashboardLayout({
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
+              <div className="h-8 w-8 bg-[#ec5d4b] rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-medium">
                   {user?.name?.charAt(0).toUpperCase()}
                 </span>

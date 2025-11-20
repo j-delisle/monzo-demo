@@ -97,7 +97,7 @@ export function TransactionsTable({
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
       "Food & Drink": "bg-orange-100 text-orange-800",
-      Transport: "bg-blue-100 text-blue-800",
+      Transport: "bg-[#ec5d4b]/10 text-[#ec5d4b]",
       Shopping: "bg-purple-100 text-purple-800",
       Groceries: "bg-green-100 text-green-800",
       Entertainment: "bg-pink-100 text-pink-800",
@@ -116,7 +116,7 @@ export function TransactionsTable({
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ec5d4b]"></div>
           </div>
         </CardContent>
       </Card>
