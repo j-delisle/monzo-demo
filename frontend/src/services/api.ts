@@ -3,27 +3,9 @@ import type { Account, Transaction, CreateTransaction, TopUpRule, CreateTopUpRul
 
 // Centralized API URL configuration
 export const getApiBaseUrl = (): string => {
-  // Check if we have an environment variable set explicitly
-  if (import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL
-  }
-  
-  // Check if we're in debug/development mode
-  const isDebug = import.meta.env.VITE_DEBUG === 'true' || import.meta.env.DEV
-  
-  if (isDebug) {
-    // Development/debug mode - use localhost
-    return 'http://localhost:8000'
-  }
-  
-  // Production mode (default) - use current host with backend port
-  const currentHost = window.location.host
-  const protocol = window.location.protocol
-  
-  // Replace frontend port (3000) with backend port (8000)
-  const backendHost = currentHost.replace(':3000', ':8000')
-  
-  return `${protocol}//${backendHost}`
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+  console.log('Using API Base URL:', apiUrl)
+  return apiUrl
 }
 
 const API_BASE_URL = getApiBaseUrl()
