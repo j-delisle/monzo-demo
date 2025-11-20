@@ -1,6 +1,6 @@
 # Monzo Demo MVP
 
-A full-stack banking demo application inspired by Monzo's features, showcasing microservice architecture with automatic transaction categorization and TopUp functionality.
+A full-stack banking demo application inspired by Monzo's features, showcasing microservice architecture with automatic transaction categorization, TopUp functionality, user authentication, and comprehensive observability features.
 
 ## 🏗️ Architecture
 
@@ -19,11 +19,13 @@ A full-stack banking demo application inspired by Monzo's features, showcasing m
 ## 🚀 Features
 
 ### ✅ Implemented
+- **User Authentication**: JWT-based login/signup system with secure session management
 - **Account Management**: View multiple accounts with live balances
 - **Transaction Processing**: Create transactions with automatic categorization
 - **Auto TopUp Logic**: Set rules to automatically top up accounts when balance falls below threshold
 - **Transaction Categorization**: AI-style categorization using Go microservice
-- **Real-time Dashboard**: React dashboard with live updates
+- **Real-time Dashboard**: React dashboard with live updates and Monzo branding
+- **Observability & Monitoring**: Prometheus metrics, structured logging, and monitoring dashboard
 - **Microservice Architecture**: Demonstrates service separation and communication
 
 ### 📊 Transaction Categories
@@ -38,11 +40,12 @@ A full-stack banking demo application inspired by Monzo's features, showcasing m
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: React 18, TypeScript, Vite, TailwindCSS, shadcn/ui
-- **Backend**: FastAPI (Python), Pydantic, HTTP Client
+- **Frontend**: React 18, TypeScript, Vite, TailwindCSS, shadcn/ui, Recharts
+- **Backend**: FastAPI (Python), Pydantic, JWT Authentication, HTTP Client
 - **Microservice**: Go, Gin Framework, REST API
-- **Infrastructure**: Docker, Docker Compose
-- **Development**: Hot reload, TypeScript, ESLint
+- **Observability**: Prometheus metrics, structured logging (JSON), monitoring dashboard
+- **Infrastructure**: Docker, Docker Compose, environment-based configuration
+- **Development**: Hot reload, TypeScript, ESLint, Monzo brand styling
 
 ## 📦 Quick Start
 
@@ -66,6 +69,7 @@ docker-compose up --build
 - Backend API: http://localhost:8000
 - Go Categorizer: http://localhost:9000
 - API Docs: http://localhost:8000/docs
+- Observability Dashboard: http://localhost:3000/observability (login required)
 
 ### 💻 Local Development
 
@@ -89,6 +93,24 @@ cd frontend
 npm install
 npm run dev
 ```
+
+## ⚙️ Environment Configuration
+
+The application supports both local development and production environments:
+
+### Local Development
+Uses `docker-compose.override.yml` for local configuration:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- Environment variables:
+  - `VITE_API_BASE_URL=http://localhost:8000`
+  - 'DATABASE_URL=postgresql connection string'
+
+### Production Deployment
+Configure `docker-compose.yml` for your production domain:
+- Set `VITE_API_BASE_URL` to your production API URL
+- Update service ports and domains as needed
+- Example: `VITE_API_BASE_URL=https://your-domain.com:8000`
 
 ## 🎯 Demo Usage
 
@@ -154,7 +176,7 @@ Expected: Categorized as "Shopping"
 curl -X POST http://localhost:8000/transactions \
   -H "Content-Type: application/json" \
   -d '{
-    "account_id": "acc_1", 
+    "account_id": "acc_1",
     "amount": 12.40,
     "merchant": "Uber",
     "description": "Ride to airport",
@@ -180,7 +202,7 @@ docker-compose logs -f backend
 docker-compose logs -f categorizer
 docker-compose logs -f frontend
 
-# Restart specific service  
+# Restart specific service
 docker-compose restart backend
 
 # Clean rebuild
@@ -192,25 +214,36 @@ docker-compose up --build
 
 ```
 monzo-demo/
-├── backend/              # FastAPI Python service
-│   ├── main.py          # API routes and logic
-│   ├── models.py        # Pydantic data models
-│   ├── database.py      # In-memory database
-│   ├── requirements.txt # Python dependencies
-│   └── Dockerfile       # Backend container
-├── categorizer/         # Go microservice
-│   ├── main.go         # Categorization logic
-│   ├── go.mod          # Go dependencies
-│   └── Dockerfile      # Go container
-├── frontend/           # React TypeScript app
+├── backend/                    # FastAPI Python service
+│   ├── main.py                # API routes and logic
+│   ├── models.py              # Pydantic data models
+│   ├── database.py            # In-memory database
+│   ├── requirements.txt       # Python dependencies
+│   └── Dockerfile             # Backend container
+├── categorizer/               # Go microservice
+│   ├── main.go               # Categorization logic
+│   ├── go.mod                # Go dependencies
+│   └── Dockerfile            # Go container
+├── frontend/                  # React TypeScript app
 │   ├── src/
-│   │   ├── components/ # React components
-│   │   ├── services/   # API clients
-│   │   └── types/      # TypeScript types
-│   ├── package.json   # Node dependencies
-│   └── Dockerfile     # Frontend container
-├── docker-compose.yml # Service orchestration
-└── README.md         # This file
+│   │   ├── components/       # React components
+│   │   │   ├── ui/          # shadcn/ui components
+│   │   │   ├── DashboardLayout.tsx
+│   │   │   ├── AccountOverviewCards.tsx
+│   │   │   ├── TransactionsList.tsx
+│   │   │   ├── ObservabilityPage.tsx
+│   │   │   └── AuthForm.tsx
+│   │   ├── contexts/        # React contexts
+│   │   │   └── AuthContext.tsx
+│   │   ├── services/        # API clients
+│   │   │   └── api.ts
+│   │   ├── types/           # TypeScript types
+│   │   │   └── index.ts
+│   │   └── App.tsx          # Main app component
+│   ├── package.json         # Node dependencies
+│   └── Dockerfile           # Frontend container
+├── docker-compose.yml         # Production orchestration
+└── README.md                  # This file
 ```
 
 ## 🎨 UI Features
@@ -220,6 +253,7 @@ monzo-demo/
 - **Modern UI**: Built with shadcn/ui and TailwindCSS
 - **Interactive Dashboard**: Click accounts, create transactions, manage rules
 - **Visual Categorization**: Color-coded transaction categories
+- **Observability Charts**: Interactive monitoring dashboard with Recharts
 - **TopUp History**: Track all automatic topups
 
 ## 🚀 Deployment
@@ -234,7 +268,7 @@ The application is containerized and ready for deployment to:
 This is a demo project for Monzo job application. Features to potentially add:
 
 1. **Authentication**: User login/signup
-2. **Real Database**: PostgreSQL integration  
+2. **Real Database**: PostgreSQL integration
 3. **Advanced ML**: Improve categorization accuracy
 4. **Spending Analytics**: Charts and insights
 5. **Mobile App**: React Native version
