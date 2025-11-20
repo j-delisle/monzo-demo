@@ -1,49 +1,81 @@
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from './ui/chart';
-import type { ChartConfig } from './ui/chart';
-import { AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from 'recharts';
-import { Badge } from './ui/badge';
-import { ActivityIcon, AlertTriangleIcon, CheckCircleIcon, ClockIcon, ServerIcon, TrendingUpIcon } from 'lucide-react';
-import MetricsApiService from '../services/metricsApi';
-import type { MetricsData, TimeSeriesDataPoint, CategoryBreakdown } from '../services/metricsApi';
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "./ui/chart";
+import type { ChartConfig } from "./ui/chart";
+import {
+  AreaChart,
+  Area,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import { Badge } from "./ui/badge";
+import {
+  ActivityIcon,
+  AlertTriangleIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  ServerIcon,
+  TrendingUpIcon,
+} from "lucide-react";
+import MetricsApiService from "../services/metricsApi";
+import type {
+  MetricsData,
+  TimeSeriesDataPoint,
+  CategoryBreakdown,
+} from "../services/metricsApi";
 
 const chartConfig = {
   transactions: {
-    label: 'Transactions',
-    color: 'hsl(var(--chart-1))',
+    label: "Transactions",
+    color: "hsl(var(--chart-1))",
   },
   requests: {
-    label: 'API Requests',
-    color: 'hsl(var(--chart-2))',
+    label: "API Requests",
+    color: "hsl(var(--chart-2))",
   },
   api_requests: {
-    label: 'API Requests',
-    color: 'hsl(var(--chart-2))',
+    label: "API Requests",
+    color: "hsl(var(--chart-2))",
   },
   categorizer: {
-    label: 'Categorizer',
-    color: 'hsl(var(--chart-3))',
+    label: "Categorizer",
+    color: "hsl(var(--chart-3))",
   },
   categorizer_requests: {
-    label: 'Categorizer Requests',
-    color: 'hsl(var(--chart-3))',
+    label: "Categorizer Requests",
+    color: "hsl(var(--chart-3))",
   },
   errors: {
-    label: 'Errors',
-    color: 'hsl(var(--chart-4))',
+    label: "Errors",
+    color: "hsl(var(--chart-4))",
   },
   response_time: {
-    label: 'Response Time (ms)',
-    color: 'hsl(var(--chart-1))',
+    label: "Response Time (ms)",
+    color: "hsl(var(--chart-1))",
   },
 } satisfies ChartConfig;
 
-
 export function ObservabilityPage() {
   const [metrics, setMetrics] = useState<MetricsData | null>(null);
-  const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesDataPoint[]>([]);
-  const [categoryBreakdown, setCategoryBreakdown] = useState<CategoryBreakdown[]>([]);
+  const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesDataPoint[]>(
+    [],
+  );
+  const [categoryBreakdown, setCategoryBreakdown] = useState<
+    CategoryBreakdown[]
+  >([]);
   const [refreshTime, setRefreshTime] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,23 +84,26 @@ export function ObservabilityPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Fetch all data in parallel
       const [fetchedMetrics, timeSeriesData, categoryData] = await Promise.all([
         MetricsApiService.getMetrics(),
         MetricsApiService.getTimeSeriesData(),
-        MetricsApiService.getCategoryBreakdown()
+        MetricsApiService.getCategoryBreakdown(),
       ]);
-      
+
       setMetrics(fetchedMetrics);
       setTimeSeriesData(timeSeriesData);
       setCategoryBreakdown(categoryData);
       setRefreshTime(new Date());
     } catch (err: any) {
-      const errorMessage = err?.response?.data?.detail || err?.message || 'Failed to fetch metrics from backend';
+      const errorMessage =
+        err?.response?.data?.detail ||
+        err?.message ||
+        "Failed to fetch metrics from backend";
       setError(errorMessage);
-      console.error('Error fetching metrics:', err);
-      
+      console.error("Error fetching metrics:", err);
+
       // Don't set fake metrics - let the error state show
       setMetrics(null);
     } finally {
@@ -103,7 +138,7 @@ export function ObservabilityPage() {
         <div className="text-center">
           <AlertTriangleIcon className="h-8 w-8 text-red-500 mx-auto" />
           <p className="mt-2 text-red-600">{error}</p>
-          <button 
+          <button
             onClick={fetchMetrics}
             className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
@@ -116,8 +151,10 @@ export function ObservabilityPage() {
 
   if (!metrics) return null;
 
-  const systemHealth = metrics?.summary?.system_health || 'degraded';
-  const avgResponseTime = metrics?.summary?.avg_response_time_ms || MetricsApiService.calculateAverageResponseTime(timeSeriesData);
+  const systemHealth = metrics?.summary?.system_health || "degraded";
+  const avgResponseTime =
+    metrics?.summary?.avg_response_time_ms ||
+    MetricsApiService.calculateAverageResponseTime(timeSeriesData);
   const successRate = metrics?.summary?.categorizer_success_rate || 0;
 
   return (
@@ -125,15 +162,23 @@ export function ObservabilityPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Observability Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Observability Dashboard
+          </h1>
           <p className="text-muted-foreground">
             System metrics and health monitoring for Monzo Demo services
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={systemHealth === 'healthy' ? 'default' : 'destructive'}>
-            {systemHealth === 'healthy' ? <CheckCircleIcon className="w-3 h-3 mr-1" /> : <AlertTriangleIcon className="w-3 h-3 mr-1" />}
-            {systemHealth === 'healthy' ? 'System Healthy' : 'System Degraded'}
+          <Badge
+            variant={systemHealth === "healthy" ? "default" : "destructive"}
+          >
+            {systemHealth === "healthy" ? (
+              <CheckCircleIcon className="w-3 h-3 mr-1" />
+            ) : (
+              <AlertTriangleIcon className="w-3 h-3 mr-1" />
+            )}
+            {systemHealth === "healthy" ? "System Healthy" : "System Degraded"}
           </Badge>
           <span className="text-sm text-muted-foreground">
             <ClockIcon className="w-3 h-3 inline mr-1" />
@@ -146,11 +191,15 @@ export function ObservabilityPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Transactions
+            </CardTitle>
             <TrendingUpIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(metrics?.summary?.total_transactions || 0).toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              {(metrics?.summary?.total_transactions || 0).toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">Real-time data</p>
           </CardContent>
         </Card>
@@ -168,23 +217,34 @@ export function ObservabilityPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Avg Response Time
+            </CardTitle>
             <ClockIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{avgResponseTime.toFixed(0)}ms</div>
+            <div className="text-2xl font-bold">
+              {avgResponseTime.toFixed(0)}ms
+            </div>
             <p className="text-xs text-muted-foreground">API requests</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Accounts</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Accounts
+            </CardTitle>
             <ServerIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics?.summary?.total_accounts || 0}</div>
-            <p className="text-xs text-muted-foreground">£{((metrics?.summary?.total_balance || 0) / 1000).toFixed(1)}k total balance</p>
+            <div className="text-2xl font-bold">
+              {metrics?.summary?.total_accounts || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              ${((metrics?.summary?.total_balance || 0) / 1000).toFixed(1)}k
+              total balance
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -195,7 +255,9 @@ export function ObservabilityPage() {
         <Card>
           <CardHeader>
             <CardTitle>Request Volume (24h)</CardTitle>
-            <CardDescription>API requests and categorizer calls over time</CardDescription>
+            <CardDescription>
+              API requests and categorizer calls over time
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig}>
@@ -203,17 +265,17 @@ export function ObservabilityPage() {
                 <XAxis dataKey="hour" />
                 <YAxis />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Area 
-                  type="monotone" 
-                  dataKey="api_requests" 
+                <Area
+                  type="monotone"
+                  dataKey="api_requests"
                   stackId="1"
                   stroke="var(--color-requests)"
                   fill="var(--color-requests)"
                   fillOpacity={0.6}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="categorizer_requests" 
+                <Area
+                  type="monotone"
+                  dataKey="categorizer_requests"
                   stackId="1"
                   stroke="var(--color-categorizer)"
                   fill="var(--color-categorizer)"
@@ -228,7 +290,9 @@ export function ObservabilityPage() {
         <Card>
           <CardHeader>
             <CardTitle>Response Time Trend</CardTitle>
-            <CardDescription>Average response times throughout the day</CardDescription>
+            <CardDescription>
+              Average response times throughout the day
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig}>
@@ -236,9 +300,9 @@ export function ObservabilityPage() {
                 <XAxis dataKey="hour" />
                 <YAxis />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Line 
-                  type="monotone" 
-                  dataKey="response_time" 
+                <Line
+                  type="monotone"
+                  dataKey="response_time"
                   stroke="#8884d8"
                   strokeWidth={2}
                   dot={false}
@@ -260,8 +324,8 @@ export function ObservabilityPage() {
                 <XAxis dataKey="hour" />
                 <YAxis />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar 
-                  dataKey="errors" 
+                <Bar
+                  dataKey="errors"
                   fill="var(--color-errors)"
                   radius={[2, 2, 0, 0]}
                 />
@@ -274,7 +338,9 @@ export function ObservabilityPage() {
         <Card>
           <CardHeader>
             <CardTitle>Transaction Categories</CardTitle>
-            <CardDescription>Distribution of categorized transactions</CardDescription>
+            <CardDescription>
+              Distribution of categorized transactions
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig}>
@@ -305,40 +371,56 @@ export function ObservabilityPage() {
             <ActivityIcon className="w-5 h-5" />
             Service Health Status
           </CardTitle>
-          <CardDescription>Real-time status of all microservices</CardDescription>
+          <CardDescription>
+            Real-time status of all microservices
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <div>
                 <h4 className="font-medium">FastAPI Backend</h4>
-                <p className="text-sm text-muted-foreground">Main API service</p>
+                <p className="text-sm text-muted-foreground">
+                  Main API service
+                </p>
               </div>
               <Badge variant="default">
                 <CheckCircleIcon className="w-3 h-3 mr-1" />
                 Healthy
               </Badge>
             </div>
-            
+
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <div>
                 <h4 className="font-medium">Go Categorizer</h4>
-                <p className="text-sm text-muted-foreground">Transaction categorization</p>
+                <p className="text-sm text-muted-foreground">
+                  Transaction categorization
+                </p>
               </div>
-              <Badge variant={(metrics?.summary?.categorizer_error_rate || 0) < 10 ? 'default' : 'destructive'}>
+              <Badge
+                variant={
+                  (metrics?.summary?.categorizer_error_rate || 0) < 10
+                    ? "default"
+                    : "destructive"
+                }
+              >
                 {(metrics?.summary?.categorizer_error_rate || 0) < 10 ? (
                   <CheckCircleIcon className="w-3 h-3 mr-1" />
                 ) : (
                   <AlertTriangleIcon className="w-3 h-3 mr-1" />
                 )}
-                {(metrics?.summary?.categorizer_error_rate || 0) < 10 ? 'Healthy' : 'Degraded'}
+                {(metrics?.summary?.categorizer_error_rate || 0) < 10
+                  ? "Healthy"
+                  : "Degraded"}
               </Badge>
             </div>
-            
+
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <div>
                 <h4 className="font-medium">PostgreSQL Database</h4>
-                <p className="text-sm text-muted-foreground">Primary data store</p>
+                <p className="text-sm text-muted-foreground">
+                  Primary data store
+                </p>
               </div>
               <Badge variant="default">
                 <CheckCircleIcon className="w-3 h-3 mr-1" />

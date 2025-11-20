@@ -57,13 +57,15 @@ export function DashboardLayout({
       >
         <div className="flex items-center justify-between h-16 px-4 border-b">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <CreditCard className="h-8 w-8 text-blue-600" />
-            </div>
-            <div className="ml-3">
-              <h1 className="text-lg font-semibold text-gray-900">
-                Monzo Demo
-              </h1>
+            <div className="flex-shrink-0 flex-col">
+              <img
+                src="/monzo-logo.png"
+                alt="Monzo Logo"
+                className="h-8 w-auto"
+              />
+              <div className="ml-3">
+                <h1 className="text-gray-800 text-xs">Demo</h1>
+              </div>
             </div>
           </div>
           <button className="md:hidden" onClick={() => setSidebarOpen(false)}>
