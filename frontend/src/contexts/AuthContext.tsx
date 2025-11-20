@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
+import { getApiBaseUrl } from '@/services/api'
 
 interface User {
   id: string
@@ -37,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchCurrentUser = async () => {
     try {
-      const response = await fetch('http://localhost:8000/auth/me', {
+      const response = await fetch(`${getApiBaseUrl()}/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -57,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setLoading(true)
     try {
-      const response = await fetch('http://localhost:8000/auth/login', {
+      const response = await fetch(`${getApiBaseUrl()}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = async (email: string, password: string, name: string) => {
     setLoading(true)
     try {
-      const response = await fetch('http://localhost:8000/auth/signup', {
+      const response = await fetch(`${getApiBaseUrl()}/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const demoLogin = async () => {
     setLoading(true)
     try {
-      const response = await fetch('http://localhost:8000/auth/demo-login', {
+      const response = await fetch(`${getApiBaseUrl()}/auth/demo-login`, {
         method: 'POST',
       })
 

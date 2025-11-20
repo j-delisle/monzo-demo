@@ -1,7 +1,32 @@
 import axios from 'axios'
 import type { Account, Transaction, CreateTransaction, TopUpRule, CreateTopUpRule, TopUpEvent } from '@/types'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+// Centralized API URL configuration
+export const getApiBaseUrl = (): string => {
+  // Check if we have an environment variable set explicitly
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL
+  }
+  
+  // Check if we're in debug/development mode
+  const isDebug = import.meta.env.VITE_DEBUG === 'true' || import.meta.env.DEV
+  
+  if (isDebug) {
+    // Development/debug mode - use localhost
+    return 'http://localhost:8000'
+  }
+  
+  // Production mode (default) - use current host with backend port
+  const currentHost = window.location.host
+  const protocol = window.location.protocol
+  
+  // Replace frontend port (3000) with backend port (8000)
+  const backendHost = currentHost.replace(':3000', ':8000')
+  
+  return `${protocol}//${backendHost}`
+}
+
+const API_BASE_URL = getApiBaseUrl()
 
 const api = axios.create({
   baseURL: API_BASE_URL,
