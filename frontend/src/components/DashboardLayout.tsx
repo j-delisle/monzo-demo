@@ -10,6 +10,7 @@ import {
   X,
   TrendingUp,
   Activity,
+  Info,
 } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -97,6 +98,19 @@ export function DashboardLayout({
             ))}
           </div>
         </nav>
+
+        {/* About section */}
+        <div className="absolute bottom-20 left-0 right-0 px-3">
+          <a
+            href="https://github.com/j-delisle/monzo-demo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center px-3 py-2 text-sm font-medium rounded-md w-full text-left text-gray-600 hover:bg-gray-50 hover:text-[#ec5d4b] transition-colors"
+          >
+            <Info className="mr-3 h-5 w-5 flex-shrink-0" />
+            About & Source Code
+          </a>
+        </div>
 
         {/* User section */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
